@@ -1,0 +1,438 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "HealthcareFacility",
+  "type": "object",
+  "description": "Healthcare Facility Registry for Egyptian Ministry of Health and Population",
+  "definitions": {
+    "Address": {
+      "type": "object",
+      "properties": {
+        "streetAddress": { "type": "string" },
+        "streetAddress2": { "type": "string" },
+        "district": { "type": "string" },
+        "city": { "type": "string" },
+        "governorate": {
+          "type": "string",
+          "enum": [
+            "Cairo", "Giza", "Alexandria", "Dakahlia", "Sharqia",
+            "Qalyubia", "Beheira", "Kafr El Sheikh", "Gharbia", "Monufia",
+            "Damietta", "Port Said", "Ismailia", "Suez", "North Sinai",
+            "South Sinai", "Red Sea", "Fayoum", "Beni Suef", "Minya",
+            "Asyut", "Sohag", "Qena", "Aswan", "Luxor", "Matrouh", "New Valley"
+          ]
+        },
+        "postalCode": { "type": "string" },
+        "country": { "type": "string", "default": "Egypt" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" }
+      },
+      "required": ["city", "governorate"]
+    },
+    "ContactInfo": {
+      "type": "object",
+      "properties": {
+        "phone": { "type": "string" },
+        "fax": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "website": { "type": "string", "format": "uri" },
+        "emergencyLine": { "type": "string" }
+      }
+    },
+    "OperatingHours": {
+      "type": "object",
+      "properties": {
+        "dayOfWeek": {
+          "type": "string",
+          "enum": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        },
+        "openTime": { "type": "string", "pattern": "^([01]?[0-9]|2[0-3]):[0-5][0-9]$" },
+        "closeTime": { "type": "string", "pattern": "^([01]?[0-9]|2[0-3]):[0-5][0-9]$" },
+        "isClosed": { "type": "boolean" }
+      }
+    }
+  },
+  "properties": {
+    "facilityNameAr": {
+      "type": "string",
+      "title": "Facility Name (Arabic)"
+    },
+    "facilityNameEn": {
+      "type": "string",
+      "title": "Facility Name (English)"
+    },
+    "healthflowFacilityId": {
+      "type": "string",
+      "title": "HealthFlow Facility ID",
+      "description": "System-generated unique identifier (EG-FAC-YYYY-NNNNN)"
+    },
+    "mohLicenseNumber": {
+      "type": "string",
+      "title": "MOH License Number",
+      "description": "Ministry of Health facility license number"
+    },
+    "commercialRegistrationNumber": {
+      "type": "string",
+      "title": "Commercial Registration Number"
+    },
+    "taxRegistrationNumber": {
+      "type": "string",
+      "title": "Tax Registration Number"
+    },
+    "facilityType": {
+      "type": "string",
+      "title": "Facility Type",
+      "enum": [
+        "General Hospital",
+        "Specialized Hospital",
+        "Teaching Hospital",
+        "University Hospital",
+        "Military Hospital",
+        "Police Hospital",
+        "Private Hospital",
+        "Outpatient Clinic",
+        "Polyclinic",
+        "Medical Center",
+        "Primary Health Care Unit",
+        "Family Health Unit",
+        "Diagnostic Center",
+        "Laboratory",
+        "Radiology Center",
+        "Dialysis Center",
+        "Rehabilitation Center",
+        "Mental Health Center",
+        "Dental Clinic",
+        "Pharmacy",
+        "Optical Center",
+        "Blood Bank",
+        "Ambulance Service",
+        "Home Healthcare Provider",
+        "Nursing Home",
+        "Maternity Center",
+        "IVF Center"
+      ]
+    },
+    "facilityCategory": {
+      "type": "string",
+      "enum": ["Government", "Private", "University", "Military", "NGO", "International"]
+    },
+    "facilityLevel": {
+      "type": "string",
+      "enum": ["Primary", "Secondary", "Tertiary", "Quaternary"]
+    },
+    "ownershipType": {
+      "type": "string",
+      "enum": ["Individual", "Partnership", "Corporation", "Government", "Non-Profit", "International Organization"]
+    },
+    "owner": {
+      "type": "object",
+      "properties": {
+        "ownerName": { "type": "string" },
+        "ownerNationalId": { "type": "string" },
+        "ownerType": {
+          "type": "string",
+          "enum": ["Individual", "Company", "Government Entity"]
+        },
+        "ownerContact": { "type": "string" }
+      }
+    },
+    "medicalDirector": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "emsRegistrationNumber": { "type": "string" },
+        "specialty": { "type": "string" },
+        "contactNumber": { "type": "string" },
+        "email": { "type": "string", "format": "email" }
+      }
+    },
+    "address": {
+      "$ref": "#/definitions/Address"
+    },
+    "contact": {
+      "$ref": "#/definitions/ContactInfo"
+    },
+    "operatingHours": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/OperatingHours" }
+    },
+    "is24Hours": {
+      "type": "boolean",
+      "default": false
+    },
+    "hasEmergency": {
+      "type": "boolean",
+      "default": false
+    },
+    "capacity": {
+      "type": "object",
+      "properties": {
+        "totalBeds": { "type": "integer" },
+        "icuBeds": { "type": "integer" },
+        "nicuBeds": { "type": "integer" },
+        "emergencyBeds": { "type": "integer" },
+        "operatingRooms": { "type": "integer" },
+        "deliveryRooms": { "type": "integer" },
+        "outpatientCapacityPerDay": { "type": "integer" }
+      }
+    },
+    "services": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "title": "Available Services"
+    },
+    "specialties": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "Internal Medicine",
+          "General Surgery",
+          "Cardiology",
+          "Cardiothoracic Surgery",
+          "Neurology",
+          "Neurosurgery",
+          "Orthopedics",
+          "Pediatrics",
+          "Obstetrics & Gynecology",
+          "Oncology",
+          "Nephrology",
+          "Urology",
+          "Dermatology",
+          "Ophthalmology",
+          "ENT",
+          "Psychiatry",
+          "Pulmonology",
+          "Gastroenterology",
+          "Endocrinology",
+          "Rheumatology",
+          "Physical Medicine & Rehabilitation",
+          "Emergency Medicine",
+          "Anesthesiology",
+          "Radiology",
+          "Pathology",
+          "Family Medicine",
+          "Dental",
+          "Plastic Surgery"
+        ]
+      }
+    },
+    "equipment": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "equipmentType": { "type": "string" },
+          "brand": { "type": "string" },
+          "model": { "type": "string" },
+          "quantity": { "type": "integer" },
+          "status": {
+            "type": "string",
+            "enum": ["operational", "maintenance", "out_of_service"]
+          }
+        }
+      }
+    },
+    "accreditations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "accreditationBody": {
+            "type": "string",
+            "enum": ["GAHAR", "JCI", "ISO 9001", "ISO 15189", "CAP", "MOHP", "Other"]
+          },
+          "certificateNumber": { "type": "string" },
+          "issueDate": { "type": "string", "format": "date" },
+          "expiryDate": { "type": "string", "format": "date" },
+          "status": {
+            "type": "string",
+            "enum": ["active", "expired", "suspended", "pending"]
+          },
+          "scope": { "type": "string" }
+        }
+      }
+    },
+    "insuranceContracts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "insurerName": { "type": "string" },
+          "insurerId": { "type": "string" },
+          "contractNumber": { "type": "string" },
+          "validFrom": { "type": "string", "format": "date" },
+          "validUntil": { "type": "string", "format": "date" },
+          "status": {
+            "type": "string",
+            "enum": ["active", "expired", "suspended"]
+          }
+        }
+      }
+    },
+    "uhiaRegistration": {
+      "type": "object",
+      "title": "UHIA Registration",
+      "description": "Universal Health Insurance Authority provider registration",
+      "properties": {
+        "registrationNumber": { "type": "string" },
+        "registrationDate": { "type": "string", "format": "date" },
+        "status": {
+          "type": "string",
+          "enum": ["active", "pending", "suspended", "inactive"]
+        },
+        "contractedServices": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["Tier 1", "Tier 2", "Tier 3"]
+        }
+      }
+    },
+    "hcxIdentifier": {
+      "type": "string",
+      "title": "HCX Provider ID",
+      "description": "HealthFlow Claims Exchange facility identifier"
+    },
+    "hcxCapabilities": {
+      "type": "object",
+      "properties": {
+        "claimsSubmission": { "type": "boolean", "default": false },
+        "preAuthorization": { "type": "boolean", "default": false },
+        "eligibilityCheck": { "type": "boolean", "default": false },
+        "paymentReceiver": { "type": "boolean", "default": false }
+      }
+    },
+    "digitalPrescriptionEnabled": {
+      "type": "boolean",
+      "title": "Digital Prescription Enabled",
+      "default": false
+    },
+    "licenseStatus": {
+      "type": "string",
+      "enum": ["active", "suspended", "revoked", "expired", "pending"],
+      "default": "pending"
+    },
+    "licenseValidFrom": {
+      "type": "string",
+      "format": "date"
+    },
+    "licenseValidUntil": {
+      "type": "string",
+      "format": "date"
+    },
+    "lastInspectionDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "nextInspectionDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "staffCount": {
+      "type": "object",
+      "properties": {
+        "doctors": { "type": "integer" },
+        "nurses": { "type": "integer" },
+        "pharmacists": { "type": "integer" },
+        "technicians": { "type": "integer" },
+        "administrative": { "type": "integer" },
+        "support": { "type": "integer" }
+      }
+    }
+  },
+  "required": [
+    "facilityNameAr",
+    "facilityNameEn",
+    "facilityType",
+    "facilityCategory",
+    "address"
+  ],
+  "_osConfig": {
+    "osComment": ["accreditations", "insuranceContracts"],
+    "privateFields": ["owner.ownerNationalId", "commercialRegistrationNumber", "taxRegistrationNumber"],
+    "signedFields": [],
+    "indexFields": [
+      "healthflowFacilityId",
+      "mohLicenseNumber",
+      "facilityType",
+      "facilityCategory",
+      "licenseStatus",
+      "address.governorate",
+      "address.city"
+    ],
+    "uniqueIndexFields": ["healthflowFacilityId", "mohLicenseNumber"],
+    "systemFields": ["osCreatedAt", "osUpdatedAt", "osCreatedBy", "osUpdatedBy"],
+    "inviteRoles": ["facility_admin"],
+    "ownershipAttributes": [
+      {
+        "email": "/contact/email",
+        "userId": "/healthflowFacilityId"
+      }
+    ],
+    "attestationPolicies": [
+      {
+        "name": "mohVerification",
+        "conditions": "(ATTESTOR#$.roles contains 'moh_verifier')",
+        "type": "MANUAL",
+        "attestorPlugin": "did:internal:ClaimPluginActor?entity=MOH_Verifier",
+        "attestationProperties": {
+          "mohLicenseNumber": "$.mohLicenseNumber",
+          "licenseStatus": "$.licenseStatus",
+          "facilityType": "$.facilityType"
+        }
+      },
+      {
+        "name": "gaharAccreditation",
+        "conditions": "(ATTESTOR#$.roles contains 'gahar_verifier')",
+        "type": "MANUAL",
+        "attestorPlugin": "did:internal:ClaimPluginActor?entity=GAHAR_Verifier",
+        "attestationProperties": {
+          "accreditations": "$.accreditations"
+        }
+      },
+      {
+        "name": "uhiaRegistration",
+        "conditions": "(ATTESTOR#$.roles contains 'uhia_verifier')",
+        "type": "MANUAL",
+        "attestorPlugin": "did:internal:ClaimPluginActor?entity=UHIA_Verifier",
+        "attestationProperties": {
+          "uhiaRegistration": "$.uhiaRegistration"
+        }
+      }
+    ],
+    "credentialTemplate": {
+      "@context": [
+        "https://www.w3.org/2018/credentials/v1",
+        "https://healthflow.eg/credentials/v1"
+      ],
+      "type": ["VerifiableCredential", "FacilityLicenseCredential"],
+      "credentialSubject": {
+        "type": "HealthcareFacility",
+        "id": "did:healthflow:{{healthflowFacilityId}}",
+        "name": "{{facilityNameEn}}",
+        "nameAr": "{{facilityNameAr}}",
+        "mohLicenseNumber": "{{mohLicenseNumber}}",
+        "facilityType": "{{facilityType}}",
+        "facilityCategory": "{{facilityCategory}}",
+        "governorate": "{{address.governorate}}",
+        "city": "{{address.city}}",
+        "licenseStatus": "{{licenseStatus}}",
+        "validFrom": "{{licenseValidFrom}}",
+        "validUntil": "{{licenseValidUntil}}"
+      },
+      "issuer": "did:healthflow:MinistryOfHealth",
+      "issuanceDate": "{{osCreatedAt}}"
+    },
+    "certificateTemplates": {
+      "html": "facility-license-template.html",
+      "svg": "facility-license-template.svg"
+    },
+    "enableLogin": false,
+    "enableSearch": true,
+    "subjectType": "healthcare_facility"
+  }
+}

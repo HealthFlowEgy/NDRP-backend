@@ -1,0 +1,349 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Nurse",
+  "type": "object",
+  "description": "Healthcare Provider - Nurse Registry for Egyptian Nursing Syndicate",
+  "definitions": {
+    "Address": {
+      "type": "object",
+      "properties": {
+        "streetAddress": { "type": "string" },
+        "streetAddress2": { "type": "string" },
+        "city": { "type": "string" },
+        "governorate": {
+          "type": "string",
+          "enum": [
+            "Cairo", "Giza", "Alexandria", "Dakahlia", "Sharqia",
+            "Qalyubia", "Beheira", "Kafr El Sheikh", "Gharbia", "Monufia",
+            "Damietta", "Port Said", "Ismailia", "Suez", "North Sinai",
+            "South Sinai", "Red Sea", "Fayoum", "Beni Suef", "Minya",
+            "Asyut", "Sohag", "Qena", "Aswan", "Luxor", "Matrouh", "New Valley"
+          ]
+        },
+        "postalCode": { "type": "string" },
+        "country": { "type": "string", "default": "Egypt" }
+      },
+      "required": ["city", "governorate"]
+    }
+  },
+  "properties": {
+    "nationalId": {
+      "type": "string",
+      "title": "National ID Number",
+      "pattern": "^[0-9]{14}$",
+      "description": "14-digit Egyptian National ID"
+    },
+    "ensRegistrationNumber": {
+      "type": "string",
+      "title": "ENS Registration Number",
+      "description": "Egyptian Nursing Syndicate registration number"
+    },
+    "healthflowId": {
+      "type": "string",
+      "title": "HealthFlow ID",
+      "description": "System-generated unique identifier (EG-NR-YYYY-NNNNNN)"
+    },
+    "firstNameAr": {
+      "type": "string",
+      "title": "First Name (Arabic)"
+    },
+    "middleNameAr": {
+      "type": "string",
+      "title": "Middle Name (Arabic)"
+    },
+    "lastNameAr": {
+      "type": "string",
+      "title": "Last Name (Arabic)"
+    },
+    "firstNameEn": {
+      "type": "string",
+      "title": "First Name (English)"
+    },
+    "middleNameEn": {
+      "type": "string",
+      "title": "Middle Name (English)"
+    },
+    "lastNameEn": {
+      "type": "string",
+      "title": "Last Name (English)"
+    },
+    "gender": {
+      "type": "string",
+      "enum": ["male", "female"]
+    },
+    "dateOfBirth": {
+      "type": "string",
+      "format": "date"
+    },
+    "nationality": {
+      "type": "string",
+      "default": "Egyptian"
+    },
+    "mobileNumber": {
+      "type": "string",
+      "pattern": "^\\+20[0-9]{10}$",
+      "description": "Egyptian mobile number in E.164 format"
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "nursingLevel": {
+      "type": "string",
+      "title": "Nursing Level",
+      "enum": [
+        "Registered Nurse (RN)",
+        "Licensed Practical Nurse (LPN)",
+        "Nursing Technician",
+        "Advanced Practice Nurse (APN)",
+        "Clinical Nurse Specialist",
+        "Nurse Practitioner",
+        "Midwife"
+      ]
+    },
+    "specialty": {
+      "type": "string",
+      "title": "Nursing Specialty",
+      "enum": [
+        "General Nursing",
+        "Critical Care/ICU",
+        "Emergency Nursing",
+        "Pediatric Nursing",
+        "Neonatal Nursing",
+        "Oncology Nursing",
+        "Cardiac Care Nursing",
+        "Psychiatric/Mental Health",
+        "Community Health Nursing",
+        "Geriatric Nursing",
+        "Surgical Nursing",
+        "Medical-Surgical Nursing",
+        "Obstetric Nursing",
+        "Orthopedic Nursing",
+        "Dialysis/Nephrology Nursing",
+        "Infection Control",
+        "Wound Care",
+        "Palliative Care",
+        "Nurse Anesthetist",
+        "Operating Room Nursing"
+      ]
+    },
+    "qualifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "degree": {
+            "type": "string",
+            "enum": [
+              "Nursing Diploma",
+              "Technical Nursing Diploma",
+              "BSc Nursing",
+              "MSc Nursing",
+              "PhD Nursing",
+              "Specialty Certificate",
+              "Advanced Practice Certificate"
+            ]
+          },
+          "field": { "type": "string" },
+          "institution": { "type": "string" },
+          "country": { "type": "string" },
+          "yearObtained": { "type": "integer" },
+          "certificateNumber": { "type": "string" }
+        },
+        "required": ["degree", "institution", "yearObtained"]
+      }
+    },
+    "certifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "certificationName": {
+            "type": "string",
+            "enum": [
+              "BLS (Basic Life Support)",
+              "ACLS (Advanced Cardiac Life Support)",
+              "PALS (Pediatric Advanced Life Support)",
+              "NRP (Neonatal Resuscitation Program)",
+              "TNCC (Trauma Nursing Core Course)",
+              "CCRN (Critical Care Registered Nurse)",
+              "Infection Control Certification",
+              "Wound Care Certification",
+              "IV Therapy Certification",
+              "Chemotherapy Administration"
+            ]
+          },
+          "issuingBody": { "type": "string" },
+          "issueDate": { "type": "string", "format": "date" },
+          "expiryDate": { "type": "string", "format": "date" },
+          "certificateNumber": { "type": "string" }
+        },
+        "required": ["certificationName", "issueDate"]
+      }
+    },
+    "currentWorkplace": {
+      "type": "object",
+      "properties": {
+        "facilityName": { "type": "string" },
+        "facilityId": { "type": "string" },
+        "facilityType": {
+          "type": "string",
+          "enum": ["Government Hospital", "Private Hospital", "University Hospital", "Clinic", "Health Center", "Home Healthcare", "School/University Health", "Military Hospital"]
+        },
+        "department": { "type": "string" },
+        "position": {
+          "type": "string",
+          "enum": ["Staff Nurse", "Charge Nurse", "Head Nurse", "Nursing Supervisor", "Nursing Director", "Clinical Instructor"]
+        },
+        "shiftPattern": {
+          "type": "string",
+          "enum": ["Day Shift", "Night Shift", "Rotating", "On-Call"]
+        },
+        "startDate": { "type": "string", "format": "date" }
+      }
+    },
+    "licenseStatus": {
+      "type": "string",
+      "enum": ["active", "suspended", "revoked", "expired", "pending"],
+      "default": "pending"
+    },
+    "licenseValidFrom": {
+      "type": "string",
+      "format": "date"
+    },
+    "licenseValidUntil": {
+      "type": "string",
+      "format": "date"
+    },
+    "registrationDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "lastRenewalDate": {
+      "type": "string",
+      "format": "date"
+    },
+    "continuingEducation": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "courseName": { "type": "string" },
+          "provider": { "type": "string" },
+          "completionDate": { "type": "string", "format": "date" },
+          "creditHours": { "type": "number" },
+          "certificateId": { "type": "string" }
+        }
+      }
+    },
+    "languages": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "language": { "type": "string" },
+          "proficiency": {
+            "type": "string",
+            "enum": ["Native", "Fluent", "Professional", "Basic"]
+          }
+        }
+      }
+    },
+    "uhiaRegistration": {
+      "type": "object",
+      "title": "UHIA Registration",
+      "description": "Universal Health Insurance Authority registration",
+      "properties": {
+        "registrationNumber": { "type": "string" },
+        "registrationDate": { "type": "string", "format": "date" },
+        "status": {
+          "type": "string",
+          "enum": ["active", "pending", "inactive"]
+        }
+      }
+    },
+    "hcxIdentifier": {
+      "type": "string",
+      "title": "HCX Provider ID",
+      "description": "HealthFlow Claims Exchange provider identifier"
+    }
+  },
+  "required": [
+    "nationalId",
+    "firstNameAr",
+    "lastNameAr",
+    "firstNameEn",
+    "lastNameEn",
+    "gender",
+    "dateOfBirth",
+    "mobileNumber",
+    "nursingLevel",
+    "specialty"
+  ],
+  "_osConfig": {
+    "osComment": ["qualifications", "currentWorkplace", "certifications"],
+    "privateFields": ["nationalId", "dateOfBirth", "mobileNumber", "email"],
+    "signedFields": [],
+    "indexFields": ["ensRegistrationNumber", "healthflowId", "nationalId", "nursingLevel", "specialty", "licenseStatus"],
+    "uniqueIndexFields": ["ensRegistrationNumber", "nationalId", "healthflowId"],
+    "systemFields": ["osCreatedAt", "osUpdatedAt", "osCreatedBy", "osUpdatedBy"],
+    "inviteRoles": ["nurse"],
+    "ownershipAttributes": [
+      {
+        "email": "/email",
+        "mobile": "/mobileNumber",
+        "userId": "/healthflowId"
+      }
+    ],
+    "attestationPolicies": [
+      {
+        "name": "ensVerification",
+        "conditions": "(ATTESTOR#$.roles contains 'ens_verifier')",
+        "type": "MANUAL",
+        "attestorPlugin": "did:internal:ClaimPluginActor?entity=ENS_Verifier",
+        "attestationProperties": {
+          "ensRegistrationNumber": "$.ensRegistrationNumber",
+          "licenseStatus": "$.licenseStatus",
+          "nursingLevel": "$.nursingLevel"
+        }
+      },
+      {
+        "name": "certificationVerification",
+        "conditions": "(ATTESTOR#$.roles contains 'certification_verifier')",
+        "type": "MANUAL",
+        "attestorPlugin": "did:internal:ClaimPluginActor?entity=Certification_Verifier",
+        "attestationProperties": {
+          "certifications": "$.certifications"
+        }
+      }
+    ],
+    "credentialTemplate": {
+      "@context": [
+        "https://www.w3.org/2018/credentials/v1",
+        "https://healthflow.eg/credentials/v1"
+      ],
+      "type": ["VerifiableCredential", "NurseLicenseCredential"],
+      "credentialSubject": {
+        "type": "Nurse",
+        "id": "did:healthflow:{{healthflowId}}",
+        "name": "{{firstNameEn}} {{middleNameEn}} {{lastNameEn}}",
+        "nameAr": "{{firstNameAr}} {{middleNameAr}} {{lastNameAr}}",
+        "ensRegistrationNumber": "{{ensRegistrationNumber}}",
+        "nursingLevel": "{{nursingLevel}}",
+        "specialty": "{{specialty}}",
+        "licenseStatus": "{{licenseStatus}}",
+        "validFrom": "{{licenseValidFrom}}",
+        "validUntil": "{{licenseValidUntil}}"
+      },
+      "issuer": "did:healthflow:EgyptianNursingSyndicate",
+      "issuanceDate": "{{osCreatedAt}}"
+    },
+    "certificateTemplates": {
+      "html": "nurse-license-template.html",
+      "svg": "nurse-license-template.svg"
+    },
+    "enableLogin": true,
+    "enableSearch": true,
+    "subjectType": "healthcare_professional"
+  }
+}

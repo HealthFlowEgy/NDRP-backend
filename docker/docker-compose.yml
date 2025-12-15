@@ -1,0 +1,692 @@
+version: "3.8"
+
+# =============================================================================
+# HealthFlow Sunbird RC v2 - Egyptian Healthcare Registry
+# Production Docker Compose Configuration
+# =============================================================================
+
+services:
+  # ===========================================================================
+  # CORE INFRASTRUCTURE
+  # ===========================================================================
+  
+  db:
+    image: postgres:14-alpine
+    container_name: healthflow-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: registry
+      POSTGRES_USER: ${POSTGRES_USER:-healthflow}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-healthflow} -d registry"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - healthflow-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  redis:
+    image: redis:7-alpine
+    container_name: healthflow-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - healthflow-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: healthflow-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.security.enrollment.enabled=false
+      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - cluster.name=healthflow-cluster
+      - bootstrap.memory_lock=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "9200:9200"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - healthflow-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: healthflow-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
+    networks:
+      - healthflow-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: healthflow-kafka
+    restart: unless-stopped
+    depends_on:
+      zookeeper:
+        condition: service_started
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 168
+    ports:
+      - "9092:9092"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+    networks:
+      - healthflow-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ===========================================================================
+  # SECURITY & KEY MANAGEMENT (V2 Architecture)
+  # ===========================================================================
+  
+  vault:
+    image: hashicorp/vault:1.15
+    container_name: healthflow-vault
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    environment:
+      VAULT_DEV_ROOT_TOKEN_ID: ${VAULT_TOKEN}
+      VAULT_DEV_LISTEN_ADDRESS: 0.0.0.0:8200
+      VAULT_ADDR: http://0.0.0.0:8200
+    ports:
+      - "8200:8200"
+    volumes:
+      - vault_data:/vault/data
+      - ./configs/vault-config.hcl:/vault/config/config.hcl:ro
+    command: server -dev
+    healthcheck:
+      test: ["CMD", "vault", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - healthflow-network
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0
+    container_name: healthflow-keycloak
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://db:5432/keycloak
+      KC_DB_USERNAME: ${POSTGRES_USER:-healthflow}
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY: edge
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8080:8080"
+    command: start-dev --import-realm
+    volumes:
+      - ./configs/keycloak:/opt/keycloak/data/import:ro
+    networks:
+      - healthflow-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  # ===========================================================================
+  # SUNBIRD RC CORE SERVICES
+  # ===========================================================================
+  
+  registry:
+    image: ghcr.io/sunbird-rc/sunbird-rc-core:v2.0.0
+    container_name: healthflow-registry
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    environment:
+      # Database Configuration
+      connectionInfo_uri: jdbc:postgresql://db:5432/registry
+      connectionInfo_username: ${POSTGRES_USER:-healthflow}
+      connectionInfo_password: ${POSTGRES_PASSWORD}
+      
+      # Elasticsearch Configuration
+      elastic_search_connection_url: elasticsearch:9200
+      elastic_search_enabled: "true"
+      search_provider: dev.sunbirdrc.registry.service.ElasticSearchService
+      
+      # Keycloak Configuration
+      authentication_enabled: "true"
+      keycloak_url: http://keycloak:8080/auth
+      keycloak_realm: ${KEYCLOAK_REALM:-healthflow}
+      keycloak-resource: ${KEYCLOAK_CLIENT:-registry-frontend}
+      keycloak-credentials-secret: ${KEYCLOAK_SECRET}
+      
+      # V2 Signature Provider
+      signature_enabled: "true"
+      SIGNATURE_PROVIDER: dev.sunbirdrc.registry.service.impl.SignatureV2ServiceImpl
+      
+      # V2 Credential Services
+      did_enabled: "true"
+      did_health_check_url: http://identity:3332/health
+      did_generate_url: http://identity:3332/did/generate
+      did_resolve_url: http://identity:3332/did/resolve
+      
+      signature_v2_health_check_url: http://credentials:3000/health
+      signature_v2_issue_url: http://credentials:3000/credentials/issue
+      signature_v2_get_url: http://credentials:3000/credentials
+      signature_v2_delete_url: http://credentials:3000/credentials
+      signature_v2_verify_url: http://credentials:3000/credentials/verify
+      signature_v2_revocation_list_url: http://credentials:3000/credentials/revocation-list
+      
+      credential_schema_base_url: http://credential-schema:3333
+      
+      # Redis Cache
+      redis_host: redis
+      redis_port: 6379
+      
+      # Kafka
+      async_enabled: "true"
+      kafka_bootstrap_address: kafka:9092
+      
+      # Notification Service
+      notification_enabled: "true"
+      notification_url: http://notification-ms:8765/notification/v1/send
+      
+      # Encryption Service
+      encryption_enabled: "true"
+      encryption_uri: http://encryption-service:8013
+      encryption_batch_uri: http://encryption-service:8013/encrypt/batch
+      decryption_uri: http://encryption-service:8013/decrypt
+      decryption_batch_uri: http://encryption-service:8013/decrypt/batch
+      
+      # ID Generation
+      idgen_enabled: "true"
+      idgen_health_check_url: http://id-gen-service:8088/egov-idgen/health
+      idgen_generate_url: http://id-gen-service:8088/egov-idgen/id/_generate
+      
+      # Claims/Attestation
+      claims_enabled: "true"
+      claims_url: http://claim-ms:8082
+      
+      # File Storage
+      filestorage_enabled: "true"
+      filestorage_connection_url: http://minio:9000
+      filestorage_access_key: ${MINIO_ACCESS_KEY:-healthflow}
+      filestorage_secret_key: ${MINIO_SECRET_KEY}
+      filestorage_bucket_key: healthflow-registry
+      
+      # Schema Configuration
+      manager_type: DefinitionsManager
+      
+      # Audit Configuration
+      audit_enabled: "true"
+      audit_frame_store: NONE
+      
+      # SSO Configuration
+      sunbird_sso_url: http://keycloak:8080/auth
+      sunbird_sso_realm: ${KEYCLOAK_REALM:-healthflow}
+      sunbird_sso_admin_client_id: admin-api
+      sunbird_sso_client_id: registry-frontend
+      
+      # Registry Settings
+      registry_base_apis_enable: "true"
+      logging_level: ${LOG_LEVEL:-INFO}
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./schemas:/home/sunbirdrc/config/public/_schemas:ro
+    networks:
+      - healthflow-network
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+
+  # ===========================================================================
+  # V2 CREDENTIAL SERVICES
+  # ===========================================================================
+  
+  identity:
+    image: ghcr.io/sunbird-rc/sunbird-rc-identity-service:v2.0.0
+    container_name: healthflow-identity
+    restart: unless-stopped
+    depends_on:
+      vault:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-healthflow}:${POSTGRES_PASSWORD}@db:5432/identity
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_TOKEN}
+      VAULT_BASE_PATH: kv/healthflow
+      SIGNING_ALGORITHM: Ed25519Signature2020
+      ENABLE_AUTH: "false"
+      WEB_DID_BASE_URL: ${DID_BASE_URL:-https://healthflow.eg/did}
+    ports:
+      - "3332:3332"
+    networks:
+      - healthflow-network
+
+  credential-schema:
+    image: ghcr.io/sunbird-rc/sunbird-rc-credential-schema:v2.0.0
+    container_name: healthflow-credential-schema
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-healthflow}:${POSTGRES_PASSWORD}@db:5432/credential_schema
+      IDENTITY_BASE_URL: http://identity:3332
+      ENABLE_AUTH: "false"
+    ports:
+      - "3333:3333"
+    networks:
+      - healthflow-network
+
+  credentials:
+    image: ghcr.io/sunbird-rc/sunbird-rc-credentials-service:v2.0.0
+    container_name: healthflow-credentials
+    restart: unless-stopped
+    depends_on:
+      identity:
+        condition: service_started
+      credential-schema:
+        condition: service_started
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-healthflow}:${POSTGRES_PASSWORD}@db:5432/credentials
+      IDENTITY_BASE_URL: http://identity:3332
+      SCHEMA_BASE_URL: http://credential-schema:3333
+      VAULT_ADDR: http://vault:8200
+      VAULT_TOKEN: ${VAULT_TOKEN}
+      SIGNING_ALGORITHM: Ed25519Signature2020
+      ENABLE_AUTH: "false"
+      REVOCATION_LIST_PAGE_SIZE: 10000
+    ports:
+      - "3000:3000"
+    networks:
+      - healthflow-network
+
+  # ===========================================================================
+  # CERTIFICATE & TEMPLATE SERVICES
+  # ===========================================================================
+  
+  certificate-signer:
+    image: ghcr.io/sunbird-rc/sunbird-rc-certificate-signer:v2.0.0
+    container_name: healthflow-certificate-signer
+    restart: unless-stopped
+    environment:
+      SIGNING_ALGORITHM: Ed25519Signature2020
+      CERTIFICATE_NAMESPACE: https://healthflow.eg/credentials
+    ports:
+      - "8079:8079"
+    volumes:
+      - ./configs/signing-keys.json:/etc/signer/config.json:ro
+    networks:
+      - healthflow-network
+
+  certificate-api:
+    image: ghcr.io/sunbird-rc/sunbird-rc-certificate-api:v2.0.0
+    container_name: healthflow-certificate-api
+    restart: unless-stopped
+    depends_on:
+      - certificate-signer
+    environment:
+      CERTIFICATE_SIGNER_URL: http://certificate-signer:8079
+      QR_TYPE: W3C-VC
+      CERTIFICATE_NAMESPACE: https://healthflow.eg/credentials
+    ports:
+      - "8078:8078"
+    volumes:
+      - ./configs/templates:/etc/templates:ro
+    networks:
+      - healthflow-network
+
+  # ===========================================================================
+  # NOTIFICATION SERVICE (CEQUENS SMS Integration)
+  # ===========================================================================
+  
+  notification-ms:
+    image: ghcr.io/sunbird-rc/sunbird-rc-notification-service:v2.0.0
+    container_name: healthflow-notification-ms
+    restart: unless-stopped
+    environment:
+      # General Configuration
+      NOTIFICATION_SERVICE_ENABLED: "true"
+      
+      # SMS Configuration (Cequens)
+      SMS_ENABLED: "true"
+      SMS_PROVIDER: custom
+      SMS_PROVIDER_URL: https://apis.cequens.com/sms/v1/messages
+      SMS_AUTH_TYPE: bearer
+      SMS_AUTH_TOKEN: ${CEQUENS_ACCESS_TOKEN}
+      SMS_SENDER_ID: ${CEQUENS_SENDER_ID:-HealthFlow}
+      SMS_TEMPLATE_ENABLED: "true"
+      
+      # Email Configuration
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-false}
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@healthflow.eg}
+      
+      # Rate Limiting
+      SMS_RATE_LIMIT: 100
+      SMS_RATE_LIMIT_DURATION: 3600
+    ports:
+      - "8765:8765"
+    volumes:
+      - ./configs/notification-templates:/etc/templates:ro
+      - ./services/cequens-provider.js:/app/providers/cequens.js:ro
+    networks:
+      - healthflow-network
+
+  # ===========================================================================
+  # CLAIMS & ATTESTATION SERVICE
+  # ===========================================================================
+  
+  claim-ms:
+    image: ghcr.io/sunbird-rc/sunbird-rc-claim-ms:v2.0.0
+    container_name: healthflow-claim-ms
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-healthflow}:${POSTGRES_PASSWORD}@db:5432/claims
+      REGISTRY_URL: http://registry:8081
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-healthflow}
+    ports:
+      - "8082:8082"
+    networks:
+      - healthflow-network
+
+  # ===========================================================================
+  # SUPPORTING SERVICES
+  # ===========================================================================
+  
+  encryption-service:
+    image: ghcr.io/sunbird-rc/sunbird-rc-encryption-service:v2.0.0
+    container_name: healthflow-encryption
+    restart: unless-stopped
+    environment:
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    ports:
+      - "8013:8013"
+    networks:
+      - healthflow-network
+
+  id-gen-service:
+    image: ghcr.io/sunbird-rc/sunbird-rc-id-gen-service:v2.0.0
+    container_name: healthflow-idgen
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-healthflow}:${POSTGRES_PASSWORD}@db:5432/idgen
+      # Egyptian ID Formats
+      IDGEN_FORMAT_DOCTOR: "EG-DR-[cy]-[seq:000000]"
+      IDGEN_FORMAT_PHARMACIST: "EG-PH-[cy]-[seq:000000]"
+      IDGEN_FORMAT_NURSE: "EG-NR-[cy]-[seq:000000]"
+      IDGEN_FORMAT_FACILITY: "EG-FAC-[cy]-[seq:00000]"
+      IDGEN_FORMAT_LICENSE: "EG-LIC-[cy]-[seq:0000000]"
+    ports:
+      - "8088:8088"
+    networks:
+      - healthflow-network
+
+  public-key-service:
+    image: ghcr.io/sunbird-rc/sunbird-rc-public-key-service:v2.0.0
+    container_name: healthflow-public-key
+    restart: unless-stopped
+    depends_on:
+      - identity
+    environment:
+      IDENTITY_URL: http://identity:3332
+      BASE_URL: ${PUBLIC_KEY_BASE_URL:-https://healthflow.eg/keys}
+    ports:
+      - "3300:3300"
+    networks:
+      - healthflow-network
+
+  # ===========================================================================
+  # BULK ISSUANCE SERVICE
+  # ===========================================================================
+  
+  bulk-issuance:
+    image: ghcr.io/sunbird-rc/sunbird-rc-bulk-issuance:v2.0.0
+    container_name: healthflow-bulk-issuance
+    restart: unless-stopped
+    depends_on:
+      registry:
+        condition: service_started
+      credentials:
+        condition: service_started
+    environment:
+      REGISTRY_URL: http://registry:8081
+      CREDENTIALS_URL: http://credentials:3000
+      CREDENTIAL_SCHEMA_URL: http://credential-schema:3333
+      IDENTITY_URL: http://identity:3332
+      DATABASE_URL: postgres://${POSTGRES_USER:-healthflow}:${POSTGRES_PASSWORD}@db:5432/bulk_issuance
+      
+      # Batch Processing
+      BATCH_SIZE: 500
+      PARALLEL_WORKERS: 4
+      RETRY_ATTEMPTS: 3
+      RETRY_DELAY: 5000
+      
+      # File Storage
+      UPLOAD_DIR: /tmp/uploads
+      REPORT_DIR: /tmp/reports
+      MAX_FILE_SIZE: 52428800
+      
+      # Keycloak Auth
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM:-healthflow}
+      KEYCLOAK_CLIENT_ID: bulk-issuance
+      KEYCLOAK_CLIENT_SECRET: ${BULK_ISSUANCE_SECRET}
+    ports:
+      - "8085:8085"
+    volumes:
+      - bulk_uploads:/tmp/uploads
+      - bulk_reports:/tmp/reports
+      - ./bulk-issuance/templates:/etc/templates:ro
+    networks:
+      - healthflow-network
+
+  # ===========================================================================
+  # METRICS & ANALYTICS
+  # ===========================================================================
+  
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.8
+    container_name: healthflow-clickhouse
+    restart: unless-stopped
+    environment:
+      CLICKHOUSE_DB: healthflow_metrics
+      CLICKHOUSE_USER: healthflow
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+    ports:
+      - "8123:8123"
+      - "9009:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    networks:
+      - healthflow-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  metrics-service:
+    image: ghcr.io/sunbird-rc/sunbird-rc-metrics:v2.0.0
+    container_name: healthflow-metrics
+    restart: unless-stopped
+    depends_on:
+      - kafka
+      - clickhouse
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_DATABASE: healthflow_metrics
+      CLICKHOUSE_USER: healthflow
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD}
+    ports:
+      - "3001:3001"
+    networks:
+      - healthflow-network
+
+  # ===========================================================================
+  # FILE STORAGE (MinIO)
+  # ===========================================================================
+  
+  minio:
+    image: minio/minio:latest
+    container_name: healthflow-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-healthflow}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    ports:
+      - "9005:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - healthflow-network
+
+  # ===========================================================================
+  # NGINX REVERSE PROXY
+  # ===========================================================================
+  
+  nginx:
+    image: nginx:alpine
+    container_name: healthflow-nginx
+    restart: unless-stopped
+    depends_on:
+      - registry
+      - keycloak
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./configs/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./configs/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - healthflow-network
+
+# =============================================================================
+# NETWORKS & VOLUMES
+# =============================================================================
+
+networks:
+  healthflow-network:
+    driver: bridge
+    name: healthflow-network
+
+volumes:
+  postgres_data:
+    name: healthflow-postgres-data
+  redis_data:
+    name: healthflow-redis-data
+  es_data:
+    name: healthflow-elasticsearch-data
+  vault_data:
+    name: healthflow-vault-data
+  minio_data:
+    name: healthflow-minio-data
+  clickhouse_data:
+    name: healthflow-clickhouse-data
+  bulk_uploads:
+    name: healthflow-bulk-uploads
+  bulk_reports:
+    name: healthflow-bulk-reports
+  zookeeper_data:
+    name: healthflow-zookeeper-data
+  zookeeper_log:
+    name: healthflow-zookeeper-log
+  kafka_data:
+    name: healthflow-kafka-data
+  nginx_logs:
+    name: healthflow-nginx-logs

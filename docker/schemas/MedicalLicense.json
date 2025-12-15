@@ -1,0 +1,392 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MedicalLicense",
+  "type": "object",
+  "description": "Medical License and Certification Registry for Egyptian Healthcare Regulatory Bodies",
+  "properties": {
+    "licenseId": {
+      "type": "string",
+      "title": "License ID",
+      "description": "System-generated unique identifier (EG-LIC-YYYY-NNNNNNN)"
+    },
+    "licenseNumber": {
+      "type": "string",
+      "title": "License Number",
+      "description": "Official license number from issuing authority"
+    },
+    "licenseType": {
+      "type": "string",
+      "title": "License Type",
+      "enum": [
+        "Medical Practice License",
+        "Specialist Practice License",
+        "Pharmacy Practice License",
+        "Nursing Practice License",
+        "Dental Practice License",
+        "Laboratory Technician License",
+        "Radiology Technician License",
+        "Physiotherapy License",
+        "Midwifery License",
+        "Controlled Substances License",
+        "Facility Operating License",
+        "Medical Equipment License",
+        "Clinical Research License",
+        "Telemedicine License",
+        "Teaching/Training License",
+        "Specialty Board Certification",
+        "Professional Membership Certificate"
+      ]
+    },
+    "licenseCategory": {
+      "type": "string",
+      "enum": ["Individual", "Facility", "Equipment", "Research", "Teaching"]
+    },
+    "holderId": {
+      "type": "string",
+      "title": "Holder ID",
+      "description": "HealthFlow ID of the license holder (Doctor, Nurse, Pharmacist, or Facility)"
+    },
+    "holderType": {
+      "type": "string",
+      "enum": ["Doctor", "Pharmacist", "Nurse", "Technician", "Facility", "Organization"]
+    },
+    "holderName": {
+      "type": "string",
+      "title": "Holder Name"
+    },
+    "holderNameAr": {
+      "type": "string",
+      "title": "Holder Name (Arabic)"
+    },
+    "holderNationalId": {
+      "type": "string",
+      "title": "Holder National ID",
+      "pattern": "^[0-9]{14}$"
+    },
+    "issuingAuthority": {
+      "type": "object",
+      "properties": {
+        "authorityName": {
+          "type": "string",
+          "enum": [
+            "Egyptian Medical Syndicate (EMS)",
+            "Egyptian Pharmacists Syndicate (EPS)",
+            "Egyptian Nursing Syndicate (ENS)",
+            "Ministry of Health and Population (MOHP)",
+            "Egyptian Drug Authority (EDA)",
+            "Universal Health Insurance Authority (UHIA)",
+            "General Authority for Healthcare Accreditation (GAHAR)",
+            "Supreme Council of Universities",
+            "Egyptian Fellowship Board",
+            "Arab Board of Health Specializations",
+            "Military Medical Academy"
+          ]
+        },
+        "authorityCode": { "type": "string" },
+        "department": { "type": "string" },
+        "contactInfo": {
+          "type": "object",
+          "properties": {
+            "phone": { "type": "string" },
+            "email": { "type": "string", "format": "email" },
+            "address": { "type": "string" }
+          }
+        }
+      },
+      "required": ["authorityName"]
+    },
+    "specialty": {
+      "type": "string",
+      "title": "Specialty/Field",
+      "description": "Medical specialty or field covered by the license"
+    },
+    "subspecialties": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "scope": {
+      "type": "object",
+      "title": "License Scope",
+      "properties": {
+        "geographicScope": {
+          "type": "string",
+          "enum": ["National", "Governorate", "District", "Facility-Specific"]
+        },
+        "allowedGovernorates": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "practiceSettings": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["Hospital", "Clinic", "Laboratory", "Pharmacy", "Home Healthcare", "Telemedicine", "Mobile Unit", "Academic"]
+          }
+        },
+        "allowedProcedures": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "restrictions": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "issueDate": {
+      "type": "string",
+      "format": "date",
+      "title": "Issue Date"
+    },
+    "effectiveDate": {
+      "type": "string",
+      "format": "date",
+      "title": "Effective Date"
+    },
+    "expiryDate": {
+      "type": "string",
+      "format": "date",
+      "title": "Expiry Date"
+    },
+    "renewalDate": {
+      "type": "string",
+      "format": "date",
+      "title": "Last Renewal Date"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["active", "suspended", "revoked", "expired", "pending_renewal", "pending_verification"],
+      "default": "pending_verification"
+    },
+    "statusHistory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "status": { "type": "string" },
+          "changedAt": { "type": "string", "format": "date-time" },
+          "changedBy": { "type": "string" },
+          "reason": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "title": "License Requirements",
+      "properties": {
+        "educationRequirement": {
+          "type": "object",
+          "properties": {
+            "minimumDegree": { "type": "string" },
+            "requiredCredentials": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "verified": { "type": "boolean" }
+          }
+        },
+        "experienceRequirement": {
+          "type": "object",
+          "properties": {
+            "minimumYears": { "type": "integer" },
+            "requiredSettings": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "verified": { "type": "boolean" }
+          }
+        },
+        "examRequirement": {
+          "type": "object",
+          "properties": {
+            "examName": { "type": "string" },
+            "passDate": { "type": "string", "format": "date" },
+            "score": { "type": "number" },
+            "verified": { "type": "boolean" }
+          }
+        },
+        "continuingEducation": {
+          "type": "object",
+          "properties": {
+            "requiredHoursPerYear": { "type": "integer" },
+            "completedHours": { "type": "integer" },
+            "lastUpdated": { "type": "string", "format": "date" }
+          }
+        }
+      }
+    },
+    "fees": {
+      "type": "object",
+      "properties": {
+        "initialFee": { "type": "number" },
+        "renewalFee": { "type": "number" },
+        "currency": { "type": "string", "default": "EGP" },
+        "lastPaymentDate": { "type": "string", "format": "date" },
+        "nextPaymentDue": { "type": "string", "format": "date" },
+        "paymentStatus": {
+          "type": "string",
+          "enum": ["paid", "pending", "overdue"]
+        }
+      }
+    },
+    "disciplinaryActions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "actionType": {
+            "type": "string",
+            "enum": ["Warning", "Fine", "Suspension", "Probation", "Restriction", "Revocation"]
+          },
+          "reason": { "type": "string" },
+          "actionDate": { "type": "string", "format": "date" },
+          "endDate": { "type": "string", "format": "date" },
+          "imposedBy": { "type": "string" },
+          "caseNumber": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["active", "completed", "appealed", "overturned"]
+          }
+        }
+      }
+    },
+    "linkedCredentials": {
+      "type": "array",
+      "title": "Linked Verifiable Credentials",
+      "items": {
+        "type": "object",
+        "properties": {
+          "credentialId": { "type": "string" },
+          "credentialType": { "type": "string" },
+          "issuedAt": { "type": "string", "format": "date-time" },
+          "status": { "type": "string" }
+        }
+      }
+    },
+    "verificationHistory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "verifiedAt": { "type": "string", "format": "date-time" },
+          "verifiedBy": { "type": "string" },
+          "verificationMethod": {
+            "type": "string",
+            "enum": ["Manual", "Automated", "API", "Document Review"]
+          },
+          "result": {
+            "type": "string",
+            "enum": ["verified", "failed", "pending"]
+          },
+          "notes": { "type": "string" }
+        }
+      }
+    },
+    "documents": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "documentType": {
+            "type": "string",
+            "enum": ["License Certificate", "ID Document", "Qualification Certificate", "Experience Letter", "Exam Result", "CPD Certificate", "Other"]
+          },
+          "documentUrl": { "type": "string" },
+          "uploadedAt": { "type": "string", "format": "date-time" },
+          "verified": { "type": "boolean" }
+        }
+      }
+    }
+  },
+  "required": [
+    "licenseType",
+    "licenseCategory",
+    "holderId",
+    "holderType",
+    "holderName",
+    "issuingAuthority",
+    "issueDate",
+    "expiryDate",
+    "status"
+  ],
+  "_osConfig": {
+    "osComment": ["disciplinaryActions", "verificationHistory"],
+    "privateFields": ["holderNationalId", "fees"],
+    "signedFields": [],
+    "indexFields": [
+      "licenseId",
+      "licenseNumber",
+      "licenseType",
+      "holderId",
+      "holderType",
+      "status",
+      "expiryDate",
+      "issuingAuthority.authorityName"
+    ],
+    "uniqueIndexFields": ["licenseId", "licenseNumber"],
+    "systemFields": ["osCreatedAt", "osUpdatedAt", "osCreatedBy", "osUpdatedBy"],
+    "inviteRoles": [],
+    "ownershipAttributes": [
+      {
+        "userId": "/holderId"
+      }
+    ],
+    "attestationPolicies": [
+      {
+        "name": "licenseVerification",
+        "conditions": "(ATTESTOR#$.roles contains 'license_verifier')",
+        "type": "MANUAL",
+        "attestorPlugin": "did:internal:ClaimPluginActor?entity=License_Verifier",
+        "attestationProperties": {
+          "licenseNumber": "$.licenseNumber",
+          "status": "$.status",
+          "issuingAuthority": "$.issuingAuthority"
+        }
+      },
+      {
+        "name": "renewalVerification",
+        "conditions": "(ATTESTOR#$.roles contains 'renewal_verifier')",
+        "type": "MANUAL",
+        "attestorPlugin": "did:internal:ClaimPluginActor?entity=Renewal_Verifier",
+        "attestationProperties": {
+          "renewalDate": "$.renewalDate",
+          "expiryDate": "$.expiryDate",
+          "requirements.continuingEducation": "$.requirements.continuingEducation"
+        }
+      }
+    ],
+    "credentialTemplate": {
+      "@context": [
+        "https://www.w3.org/2018/credentials/v1",
+        "https://healthflow.eg/credentials/v1"
+      ],
+      "type": ["VerifiableCredential", "MedicalLicenseCredential"],
+      "credentialSubject": {
+        "type": "MedicalLicense",
+        "id": "did:healthflow:{{licenseId}}",
+        "licenseNumber": "{{licenseNumber}}",
+        "licenseType": "{{licenseType}}",
+        "holder": {
+          "id": "did:healthflow:{{holderId}}",
+          "name": "{{holderName}}",
+          "type": "{{holderType}}"
+        },
+        "issuingAuthority": "{{issuingAuthority.authorityName}}",
+        "specialty": "{{specialty}}",
+        "status": "{{status}}",
+        "issueDate": "{{issueDate}}",
+        "expiryDate": "{{expiryDate}}"
+      },
+      "issuer": "did:healthflow:{{issuingAuthority.authorityCode}}",
+      "issuanceDate": "{{osCreatedAt}}"
+    },
+    "certificateTemplates": {
+      "html": "license-certificate-template.html",
+      "svg": "license-certificate-template.svg"
+    },
+    "enableLogin": false,
+    "enableSearch": true,
+    "subjectType": "license"
+  }
+}

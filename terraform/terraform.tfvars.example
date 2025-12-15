@@ -1,0 +1,29 @@
+# =============================================================================
+# HealthFlow Sunbird RC v2 - Terraform Variables
+# Copy this file to terraform.tfvars and fill in your values
+# =============================================================================
+
+# Digital Ocean API Token (Required)
+# Get from: https://cloud.digitalocean.com/account/api/tokens
+do_token = "your_digitalocean_api_token_here"
+
+# SSH Key Configuration
+ssh_key_name = "AmrSurface"
+
+# Region Configuration
+# Options: nyc1, nyc3, sfo3, ams3, sgp1, lon1, fra1, tor1, blr1
+# fra1 (Frankfurt) is recommended for Egypt due to proximity
+region = "fra1"
+
+# Droplet Size
+# Recommended sizes for Sunbird RC:
+# - Development: s-2vcpu-4gb (2 vCPU, 4GB RAM)
+# - Staging: s-4vcpu-8gb (4 vCPU, 8GB RAM)
+# - Production: s-8vcpu-16gb (8 vCPU, 16GB RAM)
+droplet_size = "s-4vcpu-8gb"
+
+# Domain Configuration
+domain_name = "sunbird.healthflow.eg"
+
+# Environment
+environment = "production"
