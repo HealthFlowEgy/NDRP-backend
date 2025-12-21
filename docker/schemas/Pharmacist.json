@@ -1,292 +1,180 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Pharmacist",
+  "$schema": "http://json-schema.org/draft-07/schema",
   "type": "object",
-  "description": "Healthcare Provider - Pharmacist Registry for Egyptian Pharmacists Syndicate",
+  "properties": {
+    "Pharmacist": {
+      "$ref": "#/definitions/Pharmacist"
+    }
+  },
+  "required": ["Pharmacist"],
+  "title": "Pharmacist",
   "definitions": {
-    "Address": {
+    "Pharmacist": {
+      "$id": "#/properties/Pharmacist",
       "type": "object",
+      "title": "Pharmacist Schema",
+      "description": "Egyptian Healthcare Professional - Pharmacist Registration",
+      "required": [
+        "fullName",
+        "nationalId",
+        "pharmacySyndicateNumber",
+        "email",
+        "mobile"
+      ],
       "properties": {
-        "streetAddress": { "type": "string" },
-        "streetAddress2": { "type": "string" },
-        "city": { "type": "string" },
-        "governorate": {
+        "fullName": {
           "type": "string",
+          "title": "Full Name"
+        },
+        "fullNameArabic": {
+          "type": "string",
+          "title": "Full Name (Arabic)"
+        },
+        "nationalId": {
+          "type": "string",
+          "title": "National ID",
+          "pattern": "^[0-9]{14}$"
+        },
+        "pharmacySyndicateNumber": {
+          "type": "string",
+          "title": "Pharmacy Syndicate Number"
+        },
+        "pharmacyType": {
+          "type": "string",
+          "title": "Pharmacy Type",
           "enum": [
-            "Cairo", "Giza", "Alexandria", "Dakahlia", "Sharqia",
-            "Qalyubia", "Beheira", "Kafr El Sheikh", "Gharbia", "Monufia",
-            "Damietta", "Port Said", "Ismailia", "Suez", "North Sinai",
-            "South Sinai", "Red Sea", "Fayoum", "Beni Suef", "Minya",
-            "Asyut", "Sohag", "Qena", "Aswan", "Luxor", "Matrouh", "New Valley"
+            "Community Pharmacy",
+            "Hospital Pharmacy",
+            "Clinical Pharmacy",
+            "Industrial Pharmacy",
+            "Research Pharmacy",
+            "Regulatory Affairs",
+            "Other"
           ]
         },
-        "postalCode": { "type": "string" },
-        "country": { "type": "string", "default": "Egypt" }
-      },
-      "required": ["city", "governorate"]
-    }
-  },
-  "properties": {
-    "nationalId": {
-      "type": "string",
-      "title": "National ID Number",
-      "pattern": "^[0-9]{14}$",
-      "description": "14-digit Egyptian National ID"
-    },
-    "epsRegistrationNumber": {
-      "type": "string",
-      "title": "EPS Registration Number",
-      "description": "Egyptian Pharmacists Syndicate registration number"
-    },
-    "healthflowId": {
-      "type": "string",
-      "title": "HealthFlow ID",
-      "description": "System-generated unique identifier (EG-PH-YYYY-NNNNNN)"
-    },
-    "firstNameAr": {
-      "type": "string",
-      "title": "First Name (Arabic)"
-    },
-    "middleNameAr": {
-      "type": "string",
-      "title": "Middle Name (Arabic)"
-    },
-    "lastNameAr": {
-      "type": "string",
-      "title": "Last Name (Arabic)"
-    },
-    "firstNameEn": {
-      "type": "string",
-      "title": "First Name (English)"
-    },
-    "middleNameEn": {
-      "type": "string",
-      "title": "Middle Name (English)"
-    },
-    "lastNameEn": {
-      "type": "string",
-      "title": "Last Name (English)"
-    },
-    "gender": {
-      "type": "string",
-      "enum": ["male", "female"]
-    },
-    "dateOfBirth": {
-      "type": "string",
-      "format": "date"
-    },
-    "nationality": {
-      "type": "string",
-      "default": "Egyptian"
-    },
-    "mobileNumber": {
-      "type": "string",
-      "pattern": "^\\+20[0-9]{10}$",
-      "description": "Egyptian mobile number in E.164 format"
-    },
-    "email": {
-      "type": "string",
-      "format": "email"
-    },
-    "pharmacyType": {
-      "type": "string",
-      "title": "Pharmacy Practice Type",
-      "enum": [
-        "Community Pharmacy",
-        "Hospital Pharmacy",
-        "Clinical Pharmacy",
-        "Industrial Pharmacy",
-        "Regulatory Affairs",
-        "Academic/Research",
-        "Wholesale/Distribution"
-      ]
-    },
-    "specializations": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "enum": [
-          "Clinical Pharmacology",
-          "Oncology Pharmacy",
-          "Pediatric Pharmacy",
-          "Geriatric Pharmacy",
-          "Psychiatric Pharmacy",
-          "Nuclear Pharmacy",
-          "Pharmacokinetics",
-          "Drug Information",
-          "Compounding",
-          "Pharmaceutical Care"
-        ]
-      },
-      "title": "Specializations"
-    },
-    "qualifications": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "degree": {
-            "type": "string",
-            "enum": ["BPharm", "PharmD", "MSc Pharmacy", "PhD Pharmacy", "Clinical Pharmacy Diploma", "Fellowship"]
-          },
-          "field": { "type": "string" },
-          "institution": { "type": "string" },
-          "country": { "type": "string" },
-          "yearObtained": { "type": "integer" },
-          "certificateNumber": { "type": "string" }
-        },
-        "required": ["degree", "institution", "yearObtained"]
-      }
-    },
-    "currentWorkplace": {
-      "type": "object",
-      "properties": {
-        "pharmacyName": { "type": "string" },
-        "pharmacyLicenseNumber": { "type": "string" },
-        "facilityId": { "type": "string" },
-        "facilityType": {
+        "specialization": {
           "type": "string",
-          "enum": ["Community Pharmacy", "Hospital Pharmacy", "Chain Pharmacy", "Pharmaceutical Company", "University", "Government Health Facility"]
+          "title": "Specialization",
+          "enum": [
+            "General Pharmacy",
+            "Clinical Pharmacy",
+            "Pharmaceutical Industry",
+            "Pharmacology",
+            "Toxicology",
+            "Drug Information",
+            "Oncology Pharmacy",
+            "Pediatric Pharmacy",
+            "Geriatric Pharmacy",
+            "Nuclear Pharmacy",
+            "Other"
+          ]
         },
-        "position": {
+        "qualification": {
           "type": "string",
-          "enum": ["Owner", "Manager", "Staff Pharmacist", "Clinical Pharmacist", "Supervisor", "Director"]
+          "title": "Highest Qualification",
+          "enum": [
+            "B.Pharm",
+            "Pharm.D",
+            "M.Pharm",
+            "PhD Pharmacy",
+            "Fellowship",
+            "Other"
+          ]
         },
-        "address": { "$ref": "#/definitions/Address" },
-        "startDate": { "type": "string", "format": "date" }
-      }
-    },
-    "edaRegistration": {
-      "type": "object",
-      "title": "EDA Registration",
-      "description": "Egyptian Drug Authority registration",
-      "properties": {
-        "registrationNumber": { "type": "string" },
-        "registrationDate": { "type": "string", "format": "date" },
+        "qualificationYear": {
+          "type": "string",
+          "title": "Year of Qualification",
+          "pattern": "^[0-9]{4}$"
+        },
+        "university": {
+          "type": "string",
+          "title": "University/Institution"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "title": "Email Address"
+        },
+        "mobile": {
+          "type": "string",
+          "title": "Mobile Number",
+          "pattern": "^\\+?[0-9]{10,15}$"
+        },
+        "address": {
+          "type": "object",
+          "title": "Address",
+          "properties": {
+            "street": {"type": "string"},
+            "city": {"type": "string"},
+            "governorate": {"type": "string"},
+            "postalCode": {"type": "string"}
+          }
+        },
+        "pharmacyName": {
+          "type": "string",
+          "title": "Pharmacy Name"
+        },
+        "pharmacyAddress": {
+          "type": "string",
+          "title": "Pharmacy Address"
+        },
+        "pharmacyLicenseNumber": {
+          "type": "string",
+          "title": "Pharmacy License Number"
+        },
+        "currentEmployer": {
+          "type": "string",
+          "title": "Current Employer"
+        },
+        "yearsOfExperience": {
+          "type": "integer",
+          "title": "Years of Experience",
+          "minimum": 0
+        },
+        "licenseExpiryDate": {
+          "type": "string",
+          "format": "date",
+          "title": "License Expiry Date"
+        },
+        "registrationDate": {
+          "type": "string",
+          "format": "date",
+          "title": "Registration Date"
+        },
         "status": {
           "type": "string",
-          "enum": ["active", "pending", "suspended", "inactive"]
+          "title": "Registration Status",
+          "enum": ["Active", "Inactive", "Suspended", "Pending"],
+          "default": "Pending"
         },
-        "authorizedActivities": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": ["Dispensing", "Compounding", "Controlled Substances", "Narcotics Handling", "Biologics", "Vaccines"]
-          }
-        }
-      }
-    },
-    "controlledSubstancesLicense": {
-      "type": "object",
-      "properties": {
-        "licenseNumber": { "type": "string" },
-        "issueDate": { "type": "string", "format": "date" },
-        "expiryDate": { "type": "string", "format": "date" },
-        "status": {
+        "profilePhoto": {
           "type": "string",
-          "enum": ["active", "suspended", "revoked", "expired"]
-        },
-        "schedules": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "enum": ["Schedule I", "Schedule II", "Schedule III", "Schedule IV", "Schedule V"]
-          }
+          "title": "Profile Photo URL"
         }
       }
-    },
-    "licenseStatus": {
-      "type": "string",
-      "enum": ["active", "suspended", "revoked", "expired", "pending"],
-      "default": "pending"
-    },
-    "licenseValidFrom": {
-      "type": "string",
-      "format": "date"
-    },
-    "licenseValidUntil": {
-      "type": "string",
-      "format": "date"
-    },
-    "registrationDate": {
-      "type": "string",
-      "format": "date"
-    },
-    "lastRenewalDate": {
-      "type": "string",
-      "format": "date"
-    },
-    "continuingEducation": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "courseName": { "type": "string" },
-          "provider": { "type": "string" },
-          "completionDate": { "type": "string", "format": "date" },
-          "creditHours": { "type": "number" },
-          "certificateId": { "type": "string" }
-        }
-      }
-    },
-    "hcxIdentifier": {
-      "type": "string",
-      "title": "HCX Provider ID",
-      "description": "HealthFlow Claims Exchange provider identifier"
-    },
-    "digitalPrescriptionEnabled": {
-      "type": "boolean",
-      "title": "Digital Prescription Enabled",
-      "description": "Authorized to receive and dispense digital prescriptions",
-      "default": false
     }
   },
-  "required": [
-    "nationalId",
-    "firstNameAr",
-    "lastNameAr",
-    "firstNameEn",
-    "lastNameEn",
-    "gender",
-    "dateOfBirth",
-    "mobileNumber",
-    "pharmacyType"
-  ],
   "_osConfig": {
-    "osComment": ["qualifications", "currentWorkplace"],
-    "privateFields": ["nationalId", "dateOfBirth", "mobileNumber", "email"],
-    "signedFields": [],
-    "indexFields": ["epsRegistrationNumber", "healthflowId", "nationalId", "pharmacyType", "licenseStatus"],
-    "uniqueIndexFields": ["epsRegistrationNumber", "nationalId", "healthflowId"],
+    "privateFields": ["nationalId", "mobile", "address"],
+    "signedFields": ["fullName", "pharmacySyndicateNumber", "pharmacyType"],
+    "indexFields": ["pharmacySyndicateNumber", "nationalId", "email", "pharmacyType", "status"],
+    "uniqueIndexFields": ["pharmacySyndicateNumber", "nationalId", "email"],
     "systemFields": ["osCreatedAt", "osUpdatedAt", "osCreatedBy", "osUpdatedBy"],
-    "inviteRoles": ["pharmacist"],
+    "roles": ["Pharmacist"],
+    "inviteRoles": ["Admin"],
     "ownershipAttributes": [
       {
         "email": "/email",
-        "mobile": "/mobileNumber",
-        "userId": "/healthflowId"
+        "mobile": "/mobile",
+        "userId": "/osOwner"
       }
     ],
     "attestationPolicies": [
       {
-        "name": "epsVerification",
-        "conditions": "(ATTESTOR#$.roles contains 'eps_verifier')",
+        "name": "pharmacistVerification",
+        "conditions": "(ATTESTOR#$.pharmacySyndicateNumber#.contains(REQUESTER#$.pharmacySyndicateNumber#))",
         "type": "MANUAL",
-        "attestorPlugin": "did:internal:ClaimPluginActor?entity=EPS_Verifier",
-        "attestationProperties": {
-          "epsRegistrationNumber": "$.epsRegistrationNumber",
-          "licenseStatus": "$.licenseStatus"
-        }
-      },
-      {
-        "name": "edaVerification",
-        "conditions": "(ATTESTOR#$.roles contains 'eda_verifier')",
-        "type": "MANUAL",
-        "attestorPlugin": "did:internal:ClaimPluginActor?entity=EDA_Verifier",
-        "attestationProperties": {
-          "edaRegistration": "$.edaRegistration",
-          "controlledSubstancesLicense": "$.controlledSubstancesLicense"
-        }
+        "attestorPlugin": "did:internal:ClaimPluginActor?entity=Admin"
       }
     ],
     "credentialTemplate": {
@@ -294,28 +182,17 @@
         "https://www.w3.org/2018/credentials/v1",
         "https://healthflow.eg/credentials/v1"
       ],
-      "type": ["VerifiableCredential", "PharmacistLicenseCredential"],
+      "type": ["VerifiableCredential", "PharmacistCredential"],
+      "issuer": "did:healthflow:registry",
+      "issuanceDate": "{{osCreatedAt}}",
       "credentialSubject": {
         "type": "Pharmacist",
-        "id": "did:healthflow:{{healthflowId}}",
-        "name": "{{firstNameEn}} {{middleNameEn}} {{lastNameEn}}",
-        "nameAr": "{{firstNameAr}} {{middleNameAr}} {{lastNameAr}}",
-        "epsRegistrationNumber": "{{epsRegistrationNumber}}",
+        "id": "did:healthflow:pharmacist:{{pharmacySyndicateNumber}}",
+        "name": "{{fullName}}",
+        "pharmacySyndicateNumber": "{{pharmacySyndicateNumber}}",
         "pharmacyType": "{{pharmacyType}}",
-        "licenseStatus": "{{licenseStatus}}",
-        "validFrom": "{{licenseValidFrom}}",
-        "validUntil": "{{licenseValidUntil}}",
-        "digitalPrescriptionEnabled": "{{digitalPrescriptionEnabled}}"
-      },
-      "issuer": "did:healthflow:EgyptianPharmacistsSyndicate",
-      "issuanceDate": "{{osCreatedAt}}"
-    },
-    "certificateTemplates": {
-      "html": "pharmacist-license-template.html",
-      "svg": "pharmacist-license-template.svg"
-    },
-    "enableLogin": true,
-    "enableSearch": true,
-    "subjectType": "healthcare_professional"
+        "specialization": "{{specialization}}"
+      }
+    }
   }
 }

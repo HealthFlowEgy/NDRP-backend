@@ -1,0 +1,277 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "HealthFacility": {
+      "$ref": "#/definitions/HealthFacility"
+    }
+  },
+  "required": ["HealthFacility"],
+  "title": "HealthFacility",
+  "definitions": {
+    "HealthFacility": {
+      "$id": "#/properties/HealthFacility",
+      "type": "object",
+      "title": "Health Facility Schema",
+      "description": "Egyptian Healthcare Facility Registration",
+      "required": [
+        "facilityName",
+        "facilityType",
+        "licenseNumber",
+        "governorate",
+        "email",
+        "phone"
+      ],
+      "properties": {
+        "facilityName": {
+          "type": "string",
+          "title": "Facility Name"
+        },
+        "facilityNameArabic": {
+          "type": "string",
+          "title": "Facility Name (Arabic)"
+        },
+        "facilityType": {
+          "type": "string",
+          "title": "Facility Type",
+          "enum": [
+            "Hospital",
+            "Clinic",
+            "Polyclinic",
+            "Diagnostic Center",
+            "Laboratory",
+            "Pharmacy",
+            "Nursing Home",
+            "Rehabilitation Center",
+            "Mental Health Center",
+            "Dental Clinic",
+            "Eye Center",
+            "Dialysis Center",
+            "Blood Bank",
+            "Ambulance Service",
+            "Home Healthcare",
+            "Other"
+          ]
+        },
+        "facilityCategory": {
+          "type": "string",
+          "title": "Facility Category",
+          "enum": [
+            "Government",
+            "Private",
+            "NGO",
+            "University",
+            "Military",
+            "Police",
+            "Insurance"
+          ]
+        },
+        "licenseNumber": {
+          "type": "string",
+          "title": "Facility License Number"
+        },
+        "ministryRegistrationNumber": {
+          "type": "string",
+          "title": "Ministry of Health Registration Number"
+        },
+        "taxRegistrationNumber": {
+          "type": "string",
+          "title": "Tax Registration Number"
+        },
+        "commercialRegistrationNumber": {
+          "type": "string",
+          "title": "Commercial Registration Number"
+        },
+        "address": {
+          "type": "object",
+          "title": "Address",
+          "properties": {
+            "street": {"type": "string"},
+            "district": {"type": "string"},
+            "city": {"type": "string"},
+            "governorate": {"type": "string"},
+            "postalCode": {"type": "string"},
+            "landmark": {"type": "string"}
+          }
+        },
+        "governorate": {
+          "type": "string",
+          "title": "Governorate",
+          "enum": [
+            "Cairo", "Giza", "Alexandria", "Dakahlia", "Red Sea",
+            "Beheira", "Fayoum", "Gharbiya", "Ismailia", "Menofia",
+            "Minya", "Qaliubiya", "New Valley", "Suez", "Aswan",
+            "Assiut", "Beni Suef", "Port Said", "Damietta", "Sharkia",
+            "South Sinai", "Kafr El Sheikh", "Matrouh", "Luxor",
+            "Qena", "North Sinai", "Sohag"
+          ]
+        },
+        "geoLocation": {
+          "type": "object",
+          "title": "Geo Location",
+          "properties": {
+            "latitude": {"type": "number"},
+            "longitude": {"type": "number"}
+          }
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "title": "Email Address"
+        },
+        "phone": {
+          "type": "string",
+          "title": "Phone Number"
+        },
+        "emergencyPhone": {
+          "type": "string",
+          "title": "Emergency Phone"
+        },
+        "website": {
+          "type": "string",
+          "title": "Website"
+        },
+        "operatingHours": {
+          "type": "object",
+          "title": "Operating Hours",
+          "properties": {
+            "weekdays": {"type": "string"},
+            "weekends": {"type": "string"},
+            "is24Hours": {"type": "boolean"}
+          }
+        },
+        "bedCapacity": {
+          "type": "integer",
+          "title": "Bed Capacity",
+          "minimum": 0
+        },
+        "icuBeds": {
+          "type": "integer",
+          "title": "ICU Beds",
+          "minimum": 0
+        },
+        "emergencyServices": {
+          "type": "boolean",
+          "title": "Emergency Services Available"
+        },
+        "ambulanceServices": {
+          "type": "boolean",
+          "title": "Ambulance Services Available"
+        },
+        "specialties": {
+          "type": "array",
+          "title": "Available Specialties",
+          "items": {"type": "string"}
+        },
+        "services": {
+          "type": "array",
+          "title": "Services Offered",
+          "items": {"type": "string"}
+        },
+        "accreditations": {
+          "type": "array",
+          "title": "Accreditations",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {"type": "string"},
+              "issuingBody": {"type": "string"},
+              "validUntil": {"type": "string", "format": "date"}
+            }
+          }
+        },
+        "insuranceAccepted": {
+          "type": "array",
+          "title": "Insurance Companies Accepted",
+          "items": {"type": "string"}
+        },
+        "ownerName": {
+          "type": "string",
+          "title": "Owner/Director Name"
+        },
+        "ownerNationalId": {
+          "type": "string",
+          "title": "Owner National ID"
+        },
+        "medicalDirector": {
+          "type": "string",
+          "title": "Medical Director"
+        },
+        "medicalDirectorLicense": {
+          "type": "string",
+          "title": "Medical Director License Number"
+        },
+        "establishedDate": {
+          "type": "string",
+          "format": "date",
+          "title": "Established Date"
+        },
+        "licenseExpiryDate": {
+          "type": "string",
+          "format": "date",
+          "title": "License Expiry Date"
+        },
+        "registrationDate": {
+          "type": "string",
+          "format": "date",
+          "title": "Registration Date"
+        },
+        "status": {
+          "type": "string",
+          "title": "Registration Status",
+          "enum": ["Active", "Inactive", "Suspended", "Pending", "Under Review"],
+          "default": "Pending"
+        },
+        "facilityLogo": {
+          "type": "string",
+          "title": "Facility Logo URL"
+        },
+        "facilityImages": {
+          "type": "array",
+          "title": "Facility Images",
+          "items": {"type": "string"}
+        }
+      }
+    }
+  },
+  "_osConfig": {
+    "privateFields": ["ownerNationalId", "taxRegistrationNumber"],
+    "signedFields": ["facilityName", "licenseNumber", "facilityType", "governorate"],
+    "indexFields": ["licenseNumber", "facilityType", "governorate", "status", "facilityCategory"],
+    "uniqueIndexFields": ["licenseNumber", "ministryRegistrationNumber"],
+    "systemFields": ["osCreatedAt", "osUpdatedAt", "osCreatedBy", "osUpdatedBy"],
+    "roles": ["HealthFacility"],
+    "inviteRoles": ["Admin"],
+    "ownershipAttributes": [
+      {
+        "email": "/email",
+        "userId": "/osOwner"
+      }
+    ],
+    "attestationPolicies": [
+      {
+        "name": "facilityVerification",
+        "conditions": "(ATTESTOR#$.licenseNumber#.contains(REQUESTER#$.licenseNumber#))",
+        "type": "MANUAL",
+        "attestorPlugin": "did:internal:ClaimPluginActor?entity=Admin"
+      }
+    ],
+    "credentialTemplate": {
+      "@context": [
+        "https://www.w3.org/2018/credentials/v1",
+        "https://healthflow.eg/credentials/v1"
+      ],
+      "type": ["VerifiableCredential", "HealthFacilityCredential"],
+      "issuer": "did:healthflow:registry",
+      "issuanceDate": "{{osCreatedAt}}",
+      "credentialSubject": {
+        "type": "HealthFacility",
+        "id": "did:healthflow:facility:{{licenseNumber}}",
+        "name": "{{facilityName}}",
+        "licenseNumber": "{{licenseNumber}}",
+        "facilityType": "{{facilityType}}",
+        "governorate": "{{governorate}}"
+      }
+    }
+  }
+}

@@ -1,281 +1,211 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Doctor",
+  "$schema": "http://json-schema.org/draft-07/schema",
   "type": "object",
-  "description": "Healthcare Provider - Doctor Registry for Egyptian Medical Syndicate",
+  "properties": {
+    "Doctor": {
+      "$ref": "#/definitions/Doctor"
+    }
+  },
+  "required": ["Doctor"],
+  "title": "Doctor",
   "definitions": {
-    "Address": {
+    "Doctor": {
+      "$id": "#/properties/Doctor",
       "type": "object",
+      "title": "Doctor Schema",
+      "description": "Egyptian Healthcare Professional - Doctor Registration",
+      "required": [
+        "fullName",
+        "nationalId",
+        "syndicateNumber",
+        "specialization",
+        "email",
+        "mobile"
+      ],
       "properties": {
-        "streetAddress": { "type": "string" },
-        "streetAddress2": { "type": "string" },
-        "city": { "type": "string" },
-        "governorate": {
+        "fullName": {
           "type": "string",
+          "title": "Full Name (Arabic/English)",
+          "description": "Doctor's full legal name"
+        },
+        "fullNameArabic": {
+          "type": "string",
+          "title": "Full Name (Arabic)",
+          "description": "Doctor's full name in Arabic"
+        },
+        "nationalId": {
+          "type": "string",
+          "title": "National ID",
+          "description": "Egyptian National ID Number (14 digits)",
+          "pattern": "^[0-9]{14}$"
+        },
+        "syndicateNumber": {
+          "type": "string",
+          "title": "Medical Syndicate Number",
+          "description": "Egyptian Medical Syndicate Registration Number"
+        },
+        "specialization": {
+          "type": "string",
+          "title": "Medical Specialization",
           "enum": [
-            "Cairo", "Giza", "Alexandria", "Dakahlia", "Sharqia",
-            "Qalyubia", "Beheira", "Kafr El Sheikh", "Gharbia", "Monufia",
-            "Damietta", "Port Said", "Ismailia", "Suez", "North Sinai",
-            "South Sinai", "Red Sea", "Fayoum", "Beni Suef", "Minya",
-            "Asyut", "Sohag", "Qena", "Aswan", "Luxor", "Matrouh", "New Valley"
+            "General Practice",
+            "Internal Medicine",
+            "Surgery",
+            "Pediatrics",
+            "Obstetrics and Gynecology",
+            "Cardiology",
+            "Dermatology",
+            "Orthopedics",
+            "Ophthalmology",
+            "ENT",
+            "Neurology",
+            "Psychiatry",
+            "Radiology",
+            "Anesthesiology",
+            "Emergency Medicine",
+            "Family Medicine",
+            "Oncology",
+            "Nephrology",
+            "Gastroenterology",
+            "Pulmonology",
+            "Endocrinology",
+            "Rheumatology",
+            "Urology",
+            "Plastic Surgery",
+            "Dental",
+            "Other"
           ]
         },
-        "postalCode": { "type": "string" },
-        "country": { "type": "string", "default": "Egypt" }
-      },
-      "required": ["city", "governorate"]
-    }
-  },
-  "properties": {
-    "nationalId": {
-      "type": "string",
-      "title": "National ID Number",
-      "pattern": "^[0-9]{14}$",
-      "description": "14-digit Egyptian National ID"
-    },
-    "emsRegistrationNumber": {
-      "type": "string",
-      "title": "EMS Registration Number",
-      "description": "Egyptian Medical Syndicate registration number"
-    },
-    "healthflowId": {
-      "type": "string",
-      "title": "HealthFlow ID",
-      "description": "System-generated unique identifier (EG-DR-YYYY-NNNNNN)"
-    },
-    "titlePrefix": {
-      "type": "string",
-      "enum": ["Dr.", "Prof. Dr.", "Assoc. Prof. Dr."],
-      "title": "Title"
-    },
-    "firstNameAr": {
-      "type": "string",
-      "title": "First Name (Arabic)"
-    },
-    "middleNameAr": {
-      "type": "string",
-      "title": "Middle Name (Arabic)"
-    },
-    "lastNameAr": {
-      "type": "string",
-      "title": "Last Name (Arabic)"
-    },
-    "firstNameEn": {
-      "type": "string",
-      "title": "First Name (English)"
-    },
-    "middleNameEn": {
-      "type": "string",
-      "title": "Middle Name (English)"
-    },
-    "lastNameEn": {
-      "type": "string",
-      "title": "Last Name (English)"
-    },
-    "gender": {
-      "type": "string",
-      "enum": ["male", "female"]
-    },
-    "dateOfBirth": {
-      "type": "string",
-      "format": "date"
-    },
-    "nationality": {
-      "type": "string",
-      "default": "Egyptian"
-    },
-    "mobileNumber": {
-      "type": "string",
-      "pattern": "^\\+20[0-9]{10}$",
-      "description": "Egyptian mobile number in E.164 format"
-    },
-    "email": {
-      "type": "string",
-      "format": "email"
-    },
-    "primarySpecialty": {
-      "type": "string",
-      "title": "Primary Specialty",
-      "enum": [
-        "General Practice",
-        "Internal Medicine",
-        "Cardiology",
-        "Dermatology",
-        "Endocrinology",
-        "Gastroenterology",
-        "Geriatrics",
-        "Hematology",
-        "Infectious Diseases",
-        "Nephrology",
-        "Neurology",
-        "Oncology",
-        "Pulmonology",
-        "Rheumatology",
-        "General Surgery",
-        "Cardiothoracic Surgery",
-        "Neurosurgery",
-        "Orthopedic Surgery",
-        "Plastic Surgery",
-        "Urology",
-        "Vascular Surgery",
-        "Anesthesiology",
-        "Emergency Medicine",
-        "Family Medicine",
-        "Obstetrics & Gynecology",
-        "Pediatrics",
-        "Psychiatry",
-        "Radiology",
-        "Pathology",
-        "Ophthalmology",
-        "ENT (Otolaryngology)",
-        "Physical Medicine & Rehabilitation"
-      ]
-    },
-    "subSpecialties": {
-      "type": "array",
-      "items": { "type": "string" },
-      "title": "Sub-Specialties"
-    },
-    "qualifications": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "degree": {
-            "type": "string",
-            "enum": ["MBBCh", "MD", "MS", "PhD", "MRCP", "FRCS", "Board Certification", "Fellowship", "Diploma"]
-          },
-          "field": { "type": "string" },
-          "institution": { "type": "string" },
-          "country": { "type": "string" },
-          "yearObtained": { "type": "integer" },
-          "certificateNumber": { "type": "string" }
-        },
-        "required": ["degree", "institution", "yearObtained"]
-      }
-    },
-    "currentWorkplace": {
-      "type": "object",
-      "properties": {
-        "facilityName": { "type": "string" },
-        "facilityId": { "type": "string" },
-        "facilityType": {
+        "subSpecialization": {
           "type": "string",
-          "enum": ["Government Hospital", "Private Hospital", "University Hospital", "Clinic", "Health Center", "Military Hospital"]
+          "title": "Sub-Specialization"
         },
-        "position": { "type": "string" },
-        "department": { "type": "string" },
-        "startDate": { "type": "string", "format": "date" }
-      }
-    },
-    "practiceAddresses": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "properties": {
-          "address": { "$ref": "#/definitions/Address" },
-          "facilityName": { "type": "string" },
-          "practiceType": {
-            "type": "string",
-            "enum": ["Primary", "Secondary", "Visiting"]
-          },
-          "workingHours": { "type": "string" },
-          "contactNumber": { "type": "string" }
-        }
-      }
-    },
-    "licenseStatus": {
-      "type": "string",
-      "enum": ["active", "suspended", "revoked", "expired", "pending"],
-      "default": "pending"
-    },
-    "licenseValidFrom": {
-      "type": "string",
-      "format": "date"
-    },
-    "licenseValidUntil": {
-      "type": "string",
-      "format": "date"
-    },
-    "registrationDate": {
-      "type": "string",
-      "format": "date"
-    },
-    "lastRenewalDate": {
-      "type": "string",
-      "format": "date"
-    },
-    "uhiaRegistration": {
-      "type": "object",
-      "title": "UHIA Registration",
-      "description": "Universal Health Insurance Authority registration",
-      "properties": {
-        "registrationNumber": { "type": "string" },
-        "registrationDate": { "type": "string", "format": "date" },
+        "qualification": {
+          "type": "string",
+          "title": "Highest Qualification",
+          "enum": [
+            "MBBS",
+            "MD",
+            "MS",
+            "DNB",
+            "DM",
+            "MCh",
+            "Fellowship",
+            "PhD",
+            "Other"
+          ]
+        },
+        "qualificationYear": {
+          "type": "string",
+          "title": "Year of Qualification",
+          "pattern": "^[0-9]{4}$"
+        },
+        "university": {
+          "type": "string",
+          "title": "University/Institution"
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "title": "Email Address"
+        },
+        "mobile": {
+          "type": "string",
+          "title": "Mobile Number",
+          "pattern": "^\\+?[0-9]{10,15}$"
+        },
+        "address": {
+          "type": "object",
+          "title": "Address",
+          "properties": {
+            "street": {"type": "string"},
+            "city": {"type": "string"},
+            "governorate": {
+              "type": "string",
+              "enum": [
+                "Cairo", "Giza", "Alexandria", "Dakahlia", "Red Sea",
+                "Beheira", "Fayoum", "Gharbiya", "Ismailia", "Menofia",
+                "Minya", "Qaliubiya", "New Valley", "Suez", "Aswan",
+                "Assiut", "Beni Suef", "Port Said", "Damietta", "Sharkia",
+                "South Sinai", "Kafr El Sheikh", "Matrouh", "Luxor",
+                "Qena", "North Sinai", "Sohag"
+              ]
+            },
+            "postalCode": {"type": "string"}
+          }
+        },
+        "practiceAddress": {
+          "type": "string",
+          "title": "Practice/Clinic Address"
+        },
+        "hospitalAffiliation": {
+          "type": "string",
+          "title": "Hospital Affiliation"
+        },
+        "licenseNumber": {
+          "type": "string",
+          "title": "Practice License Number"
+        },
+        "licenseExpiryDate": {
+          "type": "string",
+          "format": "date",
+          "title": "License Expiry Date"
+        },
+        "registrationDate": {
+          "type": "string",
+          "format": "date",
+          "title": "Registration Date"
+        },
         "status": {
           "type": "string",
-          "enum": ["active", "pending", "inactive"]
+          "title": "Registration Status",
+          "enum": ["Active", "Inactive", "Suspended", "Pending"],
+          "default": "Pending"
+        },
+        "profilePhoto": {
+          "type": "string",
+          "title": "Profile Photo URL"
+        },
+        "documents": {
+          "type": "array",
+          "title": "Supporting Documents",
+          "items": {
+            "type": "object",
+            "properties": {
+              "documentType": {"type": "string"},
+              "documentUrl": {"type": "string"},
+              "uploadDate": {"type": "string", "format": "date"}
+            }
+          }
         }
-      }
-    },
-    "hcxIdentifier": {
-      "type": "string",
-      "title": "HCX Provider ID",
-      "description": "HealthFlow Claims Exchange provider identifier"
-    },
-    "digitalSignature": {
-      "type": "object",
-      "properties": {
-        "publicKeyId": { "type": "string" },
-        "algorithm": { "type": "string" },
-        "issueDate": { "type": "string", "format": "date-time" }
       }
     }
   },
-  "required": [
-    "nationalId",
-    "firstNameAr",
-    "lastNameAr",
-    "firstNameEn",
-    "lastNameEn",
-    "gender",
-    "dateOfBirth",
-    "mobileNumber",
-    "primarySpecialty"
-  ],
   "_osConfig": {
-    "osComment": ["qualifications", "currentWorkplace"],
-    "privateFields": ["nationalId", "dateOfBirth", "mobileNumber", "email"],
-    "signedFields": [],
-    "indexFields": ["emsRegistrationNumber", "healthflowId", "nationalId", "primarySpecialty", "licenseStatus"],
-    "uniqueIndexFields": ["emsRegistrationNumber", "nationalId", "healthflowId"],
+    "osComment": ["This is a comment"],
+    "privateFields": ["nationalId", "mobile", "address"],
+    "signedFields": ["fullName", "syndicateNumber", "specialization", "licenseNumber"],
+    "indexFields": ["syndicateNumber", "nationalId", "email", "specialization", "status"],
+    "uniqueIndexFields": ["syndicateNumber", "nationalId", "email"],
     "systemFields": ["osCreatedAt", "osUpdatedAt", "osCreatedBy", "osUpdatedBy"],
-    "inviteRoles": ["doctor"],
+    "roles": ["Doctor"],
+    "inviteRoles": ["Admin"],
     "ownershipAttributes": [
       {
         "email": "/email",
-        "mobile": "/mobileNumber",
-        "userId": "/healthflowId"
+        "mobile": "/mobile",
+        "userId": "/osOwner"
       }
     ],
     "attestationPolicies": [
       {
-        "name": "emsVerification",
-        "conditions": "(ATTESTOR#$.roles contains 'ems_verifier')",
+        "name": "doctorVerification",
+        "conditions": "(ATTESTOR#$.syndicateNumber#.contains(REQUESTER#$.syndicateNumber#))",
         "type": "MANUAL",
-        "attestorPlugin": "did:internal:ClaimPluginActor?entity=EMS_Verifier",
+        "attestorPlugin": "did:internal:ClaimPluginActor?entity=Admin",
         "attestationProperties": {
-          "emsRegistrationNumber": "$.emsRegistrationNumber",
-          "licenseStatus": "$.licenseStatus"
-        }
-      },
-      {
-        "name": "qualificationVerification",
-        "conditions": "(ATTESTOR#$.roles contains 'qualification_verifier')",
-        "type": "MANUAL",
-        "attestorPlugin": "did:internal:ClaimPluginActor?entity=Qualification_Verifier",
-        "attestationProperties": {
-          "qualifications": "$.qualifications"
+          "syndicateNumber": "$.syndicateNumber",
+          "fullName": "$.fullName"
         }
       }
     ],
@@ -284,27 +214,17 @@
         "https://www.w3.org/2018/credentials/v1",
         "https://healthflow.eg/credentials/v1"
       ],
-      "type": ["VerifiableCredential", "DoctorLicenseCredential"],
+      "type": ["VerifiableCredential", "DoctorCredential"],
+      "issuer": "did:healthflow:registry",
+      "issuanceDate": "{{osCreatedAt}}",
       "credentialSubject": {
         "type": "Doctor",
-        "id": "did:healthflow:{{healthflowId}}",
-        "name": "{{titlePrefix}} {{firstNameEn}} {{middleNameEn}} {{lastNameEn}}",
-        "nameAr": "{{titlePrefix}} {{firstNameAr}} {{middleNameAr}} {{lastNameAr}}",
-        "emsRegistrationNumber": "{{emsRegistrationNumber}}",
-        "specialty": "{{primarySpecialty}}",
-        "licenseStatus": "{{licenseStatus}}",
-        "validFrom": "{{licenseValidFrom}}",
-        "validUntil": "{{licenseValidUntil}}"
-      },
-      "issuer": "did:healthflow:EgyptianMedicalSyndicate",
-      "issuanceDate": "{{osCreatedAt}}"
-    },
-    "certificateTemplates": {
-      "html": "doctor-license-template.html",
-      "svg": "doctor-license-template.svg"
-    },
-    "enableLogin": true,
-    "enableSearch": true,
-    "subjectType": "healthcare_professional"
+        "id": "did:healthflow:doctor:{{syndicateNumber}}",
+        "name": "{{fullName}}",
+        "syndicateNumber": "{{syndicateNumber}}",
+        "specialization": "{{specialization}}",
+        "licenseNumber": "{{licenseNumber}}"
+      }
+    }
   }
 }
