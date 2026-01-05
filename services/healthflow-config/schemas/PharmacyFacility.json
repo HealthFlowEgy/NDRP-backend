@@ -1,0 +1,146 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "PharmacyFacility": {
+      "$ref": "#/definitions/PharmacyFacility"
+    }
+  },
+  "required": ["PharmacyFacility"],
+  "title": "PharmacyFacility",
+  "definitions": {
+    "PharmacyFacility": {
+      "$id": "#/properties/PharmacyFacility",
+      "type": "object",
+      "title": "PharmacyFacility",
+      "required": ["facilityName", "licenseNumber", "email", "governorate", "pharmacistInCharge"],
+      "properties": {
+        "facilityName": {
+          "type": "string",
+          "title": "Pharmacy Name"
+        },
+        "facilityType": {
+          "type": "string",
+          "title": "Facility Type",
+          "default": "Pharmacy"
+        },
+        "pharmacyType": {
+          "type": "string",
+          "title": "Pharmacy Type",
+          "enum": ["Community Pharmacy", "Hospital Pharmacy", "Clinical Pharmacy", "Compounding Pharmacy", "Specialty Pharmacy", "Chain Pharmacy", "Independent Pharmacy"]
+        },
+        "licenseNumber": {
+          "type": "string",
+          "title": "License Number"
+        },
+        "registrationNumber": {
+          "type": "string",
+          "title": "Ministry Registration Number"
+        },
+        "pharmacistInCharge": {
+          "type": "string",
+          "title": "Pharmacist In Charge Name"
+        },
+        "pharmacistSyndicateNumber": {
+          "type": "string",
+          "title": "Pharmacist Syndicate Number"
+        },
+        "ownerName": {
+          "type": "string",
+          "title": "Owner Name"
+        },
+        "address": {
+          "type": "string",
+          "title": "Full Address"
+        },
+        "governorate": {
+          "type": "string",
+          "title": "Governorate",
+          "enum": ["Cairo", "Giza", "Alexandria", "Dakahlia", "Red Sea", "Beheira", "Fayoum", "Gharbiya", "Ismailia", "Menofia", "Minya", "Qaliubiya", "New Valley", "Suez", "Aswan", "Assiut", "Beni Suef", "Port Said", "Damietta", "Sharkia", "South Sinai", "Kafr El Sheikh", "Matrouh", "Luxor", "Qena", "North Sinai", "Sohag"]
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "title": "Email Address"
+        },
+        "phone": {
+          "type": "string",
+          "title": "Phone Number"
+        },
+        "mobile": {
+          "type": "string",
+          "title": "Mobile Number"
+        },
+        "workingHours": {
+          "type": "string",
+          "title": "Working Hours"
+        },
+        "is24Hours": {
+          "type": "boolean",
+          "title": "24-Hour Service"
+        },
+        "hasDeliveryService": {
+          "type": "boolean",
+          "title": "Delivery Service Available"
+        },
+        "numberOfPharmacists": {
+          "type": "integer",
+          "title": "Number of Pharmacists"
+        },
+        "numberOfAssistants": {
+          "type": "integer",
+          "title": "Number of Pharmacy Assistants"
+        },
+        "servicesOffered": {
+          "type": "array",
+          "title": "Services Offered",
+          "items": {
+            "type": "string"
+          }
+        },
+        "specializations": {
+          "type": "array",
+          "title": "Specializations",
+          "items": {
+            "type": "string"
+          }
+        },
+        "controlledSubstancesLicense": {
+          "type": "boolean",
+          "title": "Licensed for Controlled Substances"
+        },
+        "coldChainCapability": {
+          "type": "boolean",
+          "title": "Cold Chain Storage Capability"
+        },
+        "insuranceAccepted": {
+          "type": "array",
+          "title": "Insurance Companies Accepted",
+          "items": {
+            "type": "string"
+          }
+        },
+        "licenseIssueDate": {
+          "type": "string",
+          "format": "date",
+          "title": "License Issue Date"
+        },
+        "licenseExpiryDate": {
+          "type": "string",
+          "format": "date",
+          "title": "License Expiry Date"
+        },
+        "lastInspectionDate": {
+          "type": "string",
+          "format": "date",
+          "title": "Last Inspection Date"
+        },
+        "status": {
+          "type": "string",
+          "title": "Status",
+          "enum": ["Active", "Inactive", "Suspended", "Under Review", "Closed"]
+        }
+      }
+    }
+  }
+}

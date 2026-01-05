@@ -1,0 +1,186 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "RadiologyCenter": {
+      "$ref": "#/definitions/RadiologyCenter"
+    }
+  },
+  "required": ["RadiologyCenter"],
+  "title": "RadiologyCenter",
+  "definitions": {
+    "RadiologyCenter": {
+      "$id": "#/properties/RadiologyCenter",
+      "type": "object",
+      "title": "RadiologyCenter",
+      "required": ["facilityName", "licenseNumber", "email", "governorate", "radiologistInCharge"],
+      "properties": {
+        "facilityName": {
+          "type": "string",
+          "title": "Radiology Center Name"
+        },
+        "facilityType": {
+          "type": "string",
+          "title": "Facility Type",
+          "default": "RadiologyCenter"
+        },
+        "centerType": {
+          "type": "string",
+          "title": "Center Type",
+          "enum": ["Diagnostic Imaging Center", "Interventional Radiology", "Nuclear Medicine", "Radiation Therapy", "Full Service Radiology", "Mobile Imaging Unit"]
+        },
+        "licenseNumber": {
+          "type": "string",
+          "title": "License Number"
+        },
+        "registrationNumber": {
+          "type": "string",
+          "title": "Ministry Registration Number"
+        },
+        "radiationLicenseNumber": {
+          "type": "string",
+          "title": "Radiation Safety License Number"
+        },
+        "radiologistInCharge": {
+          "type": "string",
+          "title": "Radiologist In Charge Name"
+        },
+        "radiologistQualification": {
+          "type": "string",
+          "title": "Radiologist Qualification"
+        },
+        "radiologistSyndicateNumber": {
+          "type": "string",
+          "title": "Radiologist Medical Syndicate Number"
+        },
+        "radiationSafetyOfficer": {
+          "type": "string",
+          "title": "Radiation Safety Officer Name"
+        },
+        "ownerName": {
+          "type": "string",
+          "title": "Owner Name"
+        },
+        "address": {
+          "type": "string",
+          "title": "Full Address"
+        },
+        "governorate": {
+          "type": "string",
+          "title": "Governorate",
+          "enum": ["Cairo", "Giza", "Alexandria", "Dakahlia", "Red Sea", "Beheira", "Fayoum", "Gharbiya", "Ismailia", "Menofia", "Minya", "Qaliubiya", "New Valley", "Suez", "Aswan", "Assiut", "Beni Suef", "Port Said", "Damietta", "Sharkia", "South Sinai", "Kafr El Sheikh", "Matrouh", "Luxor", "Qena", "North Sinai", "Sohag"]
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "title": "Email Address"
+        },
+        "phone": {
+          "type": "string",
+          "title": "Phone Number"
+        },
+        "mobile": {
+          "type": "string",
+          "title": "Mobile Number"
+        },
+        "workingHours": {
+          "type": "string",
+          "title": "Working Hours"
+        },
+        "is24Hours": {
+          "type": "boolean",
+          "title": "24-Hour Service"
+        },
+        "hasEmergencyServices": {
+          "type": "boolean",
+          "title": "Emergency Services Available"
+        },
+        "numberOfRadiologists": {
+          "type": "integer",
+          "title": "Number of Radiologists"
+        },
+        "numberOfTechnicians": {
+          "type": "integer",
+          "title": "Number of Radiology Technicians"
+        },
+        "modalitiesAvailable": {
+          "type": "array",
+          "title": "Imaging Modalities Available",
+          "items": {
+            "type": "string",
+            "enum": ["X-Ray", "CT Scan", "MRI", "Ultrasound", "Mammography", "Fluoroscopy", "PET Scan", "DEXA Scan", "Angiography", "Nuclear Medicine"]
+          }
+        },
+        "equipmentDetails": {
+          "type": "array",
+          "title": "Equipment Details",
+          "items": {
+            "type": "object",
+            "properties": {
+              "equipmentType": {
+                "type": "string"
+              },
+              "manufacturer": {
+                "type": "string"
+              },
+              "model": {
+                "type": "string"
+              },
+              "installationDate": {
+                "type": "string",
+                "format": "date"
+              }
+            }
+          }
+        },
+        "servicesOffered": {
+          "type": "array",
+          "title": "Services Offered",
+          "items": {
+            "type": "string"
+          }
+        },
+        "teleradiologyEnabled": {
+          "type": "boolean",
+          "title": "Teleradiology Enabled"
+        },
+        "pacsEnabled": {
+          "type": "boolean",
+          "title": "PACS System Enabled"
+        },
+        "insuranceAccepted": {
+          "type": "array",
+          "title": "Insurance Companies Accepted",
+          "items": {
+            "type": "string"
+          }
+        },
+        "licenseIssueDate": {
+          "type": "string",
+          "format": "date",
+          "title": "License Issue Date"
+        },
+        "licenseExpiryDate": {
+          "type": "string",
+          "format": "date",
+          "title": "License Expiry Date"
+        },
+        "radiationLicenseExpiryDate": {
+          "type": "string",
+          "format": "date",
+          "title": "Radiation License Expiry Date"
+        },
+        "lastInspectionDate": {
+          "type": "string",
+          "format": "date",
+          "title": "Last Inspection Date"
+        },
+        "status": {
+          "type": "string",
+          "title": "Status",
+          "enum": ["Active", "Inactive", "Suspended", "Under Review", "Closed"]
+        }
+      }
+    }
+  }
+}

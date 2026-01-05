@@ -1,0 +1,38 @@
+{
+  "@context": {
+    "hf": "https://healthflow.tech/credentials#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    
+    "MedicalLicenseCredential": "hf:MedicalLicenseCredential",
+    "DoctorCredential": "hf:DoctorCredential",
+    "NurseCredential": "hf:NurseCredential",
+    "PharmacistCredential": "hf:PharmacistCredential",
+    "FacilityCredential": "hf:FacilityCredential",
+    "HealthFlowCredential": "hf:HealthFlowCredential",
+    
+    "licenseNumber": {"@id": "hf:licenseNumber", "@type": "xsd:string"},
+    "professionalName": {"@id": "hf:professionalName", "@type": "xsd:string"},
+    "specialty": {"@id": "hf:specialty", "@type": "xsd:string"},
+    "issuedDate": {"@id": "hf:issuedDate", "@type": "xsd:dateTime"},
+    "expiryDate": {"@id": "hf:expiryDate", "@type": "xsd:dateTime"},
+    "licenseType": {"@id": "hf:licenseType", "@type": "xsd:string"},
+    "issuingAuthority": {"@id": "hf:issuingAuthority", "@type": "xsd:string"},
+    
+    "doctorName": {"@id": "hf:doctorName", "@type": "xsd:string"},
+    "registrationNumber": {"@id": "hf:registrationNumber", "@type": "xsd:string"},
+    "qualifications": {"@id": "hf:qualifications", "@type": "xsd:string"},
+    "hospitalAffiliation": {"@id": "hf:hospitalAffiliation", "@type": "xsd:string"},
+    
+    "nurseName": {"@id": "hf:nurseName", "@type": "xsd:string"},
+    "nursingSpecialty": {"@id": "hf:nursingSpecialty", "@type": "xsd:string"},
+    "certifications": {"@id": "hf:certifications", "@type": "xsd:string"},
+    
+    "pharmacistName": {"@id": "hf:pharmacistName", "@type": "xsd:string"},
+    "pharmacyName": {"@id": "hf:pharmacyName", "@type": "xsd:string"},
+    
+    "facilityName": {"@id": "hf:facilityName", "@type": "xsd:string"},
+    "facilityType": {"@id": "hf:facilityType", "@type": "xsd:string"},
+    "address": {"@id": "hf:address", "@type": "xsd:string"},
+    "accreditationStatus": {"@id": "hf:accreditationStatus", "@type": "xsd:string"}
+  }
+}

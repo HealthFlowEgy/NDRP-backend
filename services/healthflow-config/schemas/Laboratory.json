@@ -1,0 +1,147 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "Laboratory": {
+      "$ref": "#/definitions/Laboratory"
+    }
+  },
+  "required": ["Laboratory"],
+  "title": "Laboratory",
+  "definitions": {
+    "Laboratory": {
+      "$id": "#/properties/Laboratory",
+      "type": "object",
+      "title": "Laboratory",
+      "required": ["facilityName", "licenseNumber", "email", "governorate", "labType"],
+      "properties": {
+        "facilityName": {
+          "type": "string",
+          "title": "Laboratory Name"
+        },
+        "facilityType": {
+          "type": "string",
+          "title": "Facility Type",
+          "default": "Laboratory"
+        },
+        "labType": {
+          "type": "string",
+          "title": "Laboratory Type",
+          "enum": ["Clinical Pathology", "Microbiology", "Biochemistry", "Hematology", "Histopathology", "Molecular Diagnostics", "Genetics", "Toxicology", "Full Service", "Other"]
+        },
+        "accreditationLevel": {
+          "type": "string",
+          "title": "Accreditation Level",
+          "enum": ["Level A", "Level B", "Level C", "ISO 15189", "CAP Accredited", "Not Accredited"]
+        },
+        "licenseNumber": {
+          "type": "string",
+          "title": "License Number"
+        },
+        "registrationNumber": {
+          "type": "string",
+          "title": "Ministry Registration Number"
+        },
+        "directorName": {
+          "type": "string",
+          "title": "Laboratory Director Name"
+        },
+        "directorQualification": {
+          "type": "string",
+          "title": "Director Qualification"
+        },
+        "directorSyndicateNumber": {
+          "type": "string",
+          "title": "Director Medical Syndicate Number"
+        },
+        "address": {
+          "type": "string",
+          "title": "Full Address"
+        },
+        "governorate": {
+          "type": "string",
+          "title": "Governorate",
+          "enum": ["Cairo", "Giza", "Alexandria", "Dakahlia", "Red Sea", "Beheira", "Fayoum", "Gharbiya", "Ismailia", "Menofia", "Minya", "Qaliubiya", "New Valley", "Suez", "Aswan", "Assiut", "Beni Suef", "Port Said", "Damietta", "Sharkia", "South Sinai", "Kafr El Sheikh", "Matrouh", "Luxor", "Qena", "North Sinai", "Sohag"]
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "title": "Email Address"
+        },
+        "phone": {
+          "type": "string",
+          "title": "Phone Number"
+        },
+        "mobile": {
+          "type": "string",
+          "title": "Mobile Number"
+        },
+        "workingHours": {
+          "type": "string",
+          "title": "Working Hours"
+        },
+        "is24Hours": {
+          "type": "boolean",
+          "title": "24-Hour Service"
+        },
+        "hasHomeCollection": {
+          "type": "boolean",
+          "title": "Home Sample Collection Available"
+        },
+        "numberOfTechnicians": {
+          "type": "integer",
+          "title": "Number of Lab Technicians"
+        },
+        "numberOfPathologists": {
+          "type": "integer",
+          "title": "Number of Pathologists"
+        },
+        "testsOffered": {
+          "type": "array",
+          "title": "Tests Offered",
+          "items": {
+            "type": "string"
+          }
+        },
+        "equipmentList": {
+          "type": "array",
+          "title": "Major Equipment",
+          "items": {
+            "type": "string"
+          }
+        },
+        "qualityManagementSystem": {
+          "type": "string",
+          "title": "Quality Management System"
+        },
+        "insuranceAccepted": {
+          "type": "array",
+          "title": "Insurance Companies Accepted",
+          "items": {
+            "type": "string"
+          }
+        },
+        "licenseIssueDate": {
+          "type": "string",
+          "format": "date",
+          "title": "License Issue Date"
+        },
+        "licenseExpiryDate": {
+          "type": "string",
+          "format": "date",
+          "title": "License Expiry Date"
+        },
+        "lastInspectionDate": {
+          "type": "string",
+          "format": "date",
+          "title": "Last Inspection Date"
+        },
+        "status": {
+          "type": "string",
+          "title": "Status",
+          "enum": ["Active", "Inactive", "Suspended", "Under Review", "Closed"]
+        }
+      }
+    }
+  }
+}

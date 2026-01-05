@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "Clinic": {
+      "$ref": "#/definitions/Clinic"
+    }
+  },
+  "required": ["Clinic"],
+  "title": "Clinic",
+  "definitions": {
+    "Clinic": {
+      "$id": "#/properties/Clinic",
+      "type": "object",
+      "title": "Clinic",
+      "required": ["facilityName", "licenseNumber", "email", "governorate"],
+      "properties": {
+        "facilityName": {
+          "type": "string",
+          "title": "Clinic Name"
+        },
+        "facilityType": {
+          "type": "string",
+          "title": "Facility Type",
+          "default": "Clinic"
+        },
+        "clinicType": {
+          "type": "string",
+          "title": "Clinic Type",
+          "enum": ["General Practice", "Specialist Clinic", "Dental Clinic", "Pediatric Clinic", "Women's Health", "Eye Clinic", "ENT Clinic", "Dermatology Clinic", "Orthopedic Clinic", "Other"]
+        },
+        "licenseNumber": {
+          "type": "string",
+          "title": "License Number"
+        },
+        "registrationNumber": {
+          "type": "string",
+          "title": "Ministry Registration Number"
+        },
+        "ownerName": {
+          "type": "string",
+          "title": "Owner/Director Name"
+        },
+        "ownerSyndicateNumber": {
+          "type": "string",
+          "title": "Owner Medical Syndicate Number"
+        },
+        "address": {
+          "type": "string",
+          "title": "Full Address"
+        },
+        "governorate": {
+          "type": "string",
+          "title": "Governorate",
+          "enum": ["Cairo", "Giza", "Alexandria", "Dakahlia", "Red Sea", "Beheira", "Fayoum", "Gharbiya", "Ismailia", "Menofia", "Minya", "Qaliubiya", "New Valley", "Suez", "Aswan", "Assiut", "Beni Suef", "Port Said", "Damietta", "Sharkia", "South Sinai", "Kafr El Sheikh", "Matrouh", "Luxor", "Qena", "North Sinai", "Sohag"]
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "title": "Email Address"
+        },
+        "phone": {
+          "type": "string",
+          "title": "Phone Number"
+        },
+        "mobile": {
+          "type": "string",
+          "title": "Mobile Number"
+        },
+        "workingHours": {
+          "type": "string",
+          "title": "Working Hours"
+        },
+        "numberOfDoctors": {
+          "type": "integer",
+          "title": "Number of Doctors"
+        },
+        "numberOfNurses": {
+          "type": "integer",
+          "title": "Number of Nurses"
+        },
+        "servicesOffered": {
+          "type": "array",
+          "title": "Services Offered",
+          "items": {
+            "type": "string"
+          }
+        },
+        "hasPharmacy": {
+          "type": "boolean",
+          "title": "Has In-house Pharmacy"
+        },
+        "hasLaboratory": {
+          "type": "boolean",
+          "title": "Has In-house Laboratory"
+        },
+        "insuranceAccepted": {
+          "type": "array",
+          "title": "Insurance Companies Accepted",
+          "items": {
+            "type": "string"
+          }
+        },
+        "licenseIssueDate": {
+          "type": "string",
+          "format": "date",
+          "title": "License Issue Date"
+        },
+        "licenseExpiryDate": {
+          "type": "string",
+          "format": "date",
+          "title": "License Expiry Date"
+        },
+        "status": {
+          "type": "string",
+          "title": "Status",
+          "enum": ["Active", "Inactive", "Suspended", "Under Review", "Closed"]
+        }
+      }
+    }
+  }
+}
