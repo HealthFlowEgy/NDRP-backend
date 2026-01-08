@@ -23,7 +23,9 @@ server:
 
 notification:
   service:
-    connection_url: ${notification_url:http://localhost:8765/divoc/notification-service/v1/notification}
+    enabled: ${notification_enabled:false}
+    connection_url: ${notification_url:http://localhost:8765/notification-service/v1/notification}
+    health_url: ${notification_url:http://localhost:8765/notification-service/v1/health}
 
 cors:
   # By default, allowing all domains to access this service. Choose a particular domain,
@@ -51,6 +53,11 @@ registry:
     url: ${registry_schema_url:http://localhost:8081/_schemas/}
   attestationPolicy:
     createAccess: ${create_attestation_access_entities:User}
+  manager:
+    type: ${manager_type:DefinitionsManager}
+  redis:
+    host: ${redis_host:localhost}
+    port: ${redis_port:6379}
 
 workflow:
   enabled: ${workflow.enable:true}
@@ -179,7 +186,7 @@ decryption:
 
 signature:
   enabled: ${signature_enabled:true}
-  healthCheckURL: ${sign_health_check_url:http://localhost:8013/}
+  healthCheckURL: ${sign_health_check_url:http://localhost:8079/health}
   signURL: ${sign_url:http://localhost:8079/sign}
   verifyURL: ${verify_url:http://localhost:8079/verify}
   keysURL: ${keys_url:http://localhost:8013/keys/}
@@ -190,6 +197,7 @@ signature:
 
 certificate:
   templateBaseUrl: ${template_base_url:http://localhost:8081/api/v1/templates/}
+  healthCheckURL: ${certificate_health_check_url:http://localhost:8078/health}
   apiUrl: ${pdf_url:http://localhost:8078/api/v1/certificate}
   templateFolderPath: ${template_folder_path:public/_schemas/templates/}
   enableExternalTemplates: ${enable_external_templates:false}
@@ -218,10 +226,14 @@ keycloak-admin:
 keycloak-user:
   set-default-password: ${sunbird_keycloak_user_set_password:false}
   default-password: ${sunbird_keycloak_user_password:abcd@123}
+  # email actions which will be trigger by keycloak
+  # example email actions: VERIFY_EMAIL, UPDATE_PROFILE, UPDATE_PASSWORD, TERMS_AND_CONDITIONS etc.
+  # email details should be configured in keycloak realm settings
+  email-actions: ${keycloack_user_email_actions:}
 claims:
   url: ${claims_url:http://localhost:8081}
 authentication:
-  enabled: ${authentication_enabled:false}
+  enabled: ${authentication_enabled:true}
   publicKey:  ${authentication_publickey:}
   realm:  ${authentication_realm:sunbird-rc}
   url:  ${authentication_url:localhost:8443/auth}

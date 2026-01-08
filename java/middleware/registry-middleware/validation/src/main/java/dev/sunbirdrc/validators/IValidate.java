@@ -1,6 +1,9 @@
 package dev.sunbirdrc.validators;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import dev.sunbirdrc.registry.middleware.MiddlewareHaltException;
+
+import java.io.IOException;
 
 public interface IValidate {
 
@@ -14,4 +17,8 @@ public interface IValidate {
      * @param definitionContent
      */
     void addDefinitions(String definitionTitle, String definitionContent);
+
+    void addDefinitions(JsonNode schema) throws IOException;
+
+    void removeDefinition(JsonNode jsonNode);
 }

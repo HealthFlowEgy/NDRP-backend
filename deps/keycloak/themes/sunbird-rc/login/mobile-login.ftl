@@ -20,9 +20,9 @@
             }
         </script>
     <#elseif section = "form">
-        <h3>Login</h3>
         <div class="ndear-login-card-wrapper">
-
+            <h3>Login</h3>
+            <br/>
             <b>Email Id / Mobile Number</b>
             <div class="box-container">
                 <#if realm.password>

@@ -2,10 +2,12 @@ package dev.sunbirdrc.registry.service.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.sunbirdrc.pojos.AsyncRequest;
 import dev.sunbirdrc.registry.model.dto.CreateEntityMessage;
 import dev.sunbirdrc.registry.service.RegistryService;
 import dev.sunbirdrc.registry.sink.shard.Shard;
 import org.jetbrains.annotations.NotNull;
+import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +15,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.concurrent.ListenableFuture;
 import org.springframework.util.concurrent.ListenableFutureCallback;
@@ -30,9 +33,16 @@ public class RegistryAsyncServiceImpl extends RegistryServiceImpl implements Reg
 	@Autowired
 	private ObjectMapper objectMapper;
 
+	@Autowired
+	private AsyncRequest asyncRequest;
+
 	@Override
 	public String addEntity(Shard shard, String userId, JsonNode inputJson, boolean skipSignature) throws Exception {
-		CreateEntityMessage createEntityMessage = CreateEntityMessage.builder().userId(userId).inputJson(inputJson).skipSignature(skipSignature).build();
+		KeycloakAuthenticationToken keycloakAuthenticationToken = (KeycloakAuthenticationToken) SecurityContextHolder.getContext().getAuthentication();
+		CreateEntityMessage createEntityMessage = CreateEntityMessage.builder().userId(userId).inputJson(inputJson)
+				.skipSignature(skipSignature).webhookUrl(asyncRequest.getWebhookUrl())
+				.emailId(keycloakAuthenticationToken.getAccount().getKeycloakSecurityContext().getToken().getEmail())
+				.build();
 		String message = objectMapper.writeValueAsString(createEntityMessage);
 		String transactionId = UUID.randomUUID().toString();
 		ListenableFuture<SendResult<String, String>> future =

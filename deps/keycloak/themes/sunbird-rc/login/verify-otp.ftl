@@ -9,7 +9,7 @@
             window.onload = function (e) {
                 var mobileNumber = sessionStorage.getItem("mobile_number");
                 document.getElementById("mobile_number").value = mobileNumber;
-                document.getElementById("mobile-label").innerText = "Enter the code sent to " + mobileNumber;
+                document.getElementById("mobile-label").innerText = "Enter the code sent to " + (mobileNumber.length > 3 ? "***"+mobileNumber.substring(3) : mobileNumber);
                 if(window.location.protocol === "https:") {
                     let formField = document.getElementById("kc-form-login");
                     if (formField) {
@@ -18,13 +18,18 @@
                 }
                 var timer = document.getElementById("resend-timer");
                 var resentCom = document.getElementById("resend-msg");
-                var timerCount = 10;
-                let intervalId = setInterval(() => {
+                var timerCount = ${properties.resendTimer};
+
+                function setTime() {
                     timer.className = "mt-2";
-                    let minutes = timerCount/60;
-                    let seconds = timerCount%60;
-                    timer.innerHTML = "Resend OTP in " + (minutes < 10 ? "0" + parseInt(minutes) : parseInt(minutes) ) + ":" + (seconds < 10 ? "0" + seconds : seconds )
+                    let minutes = timerCount / 60;
+                    let seconds = timerCount % 60;
+                    timer.innerHTML = "Resend OTP in " + (minutes < 10 ? "0" + parseInt(minutes) : parseInt(minutes)) + ":" + (seconds < 10 ? "0" + seconds : seconds)
                     timerCount--;
+                }
+                setTime()
+                let intervalId = setInterval(() => {
+                    setTime();
                 }, 1000);
                 setTimeout(() => {
                     clearInterval(intervalId)
@@ -34,7 +39,7 @@
             }
         </script>
     <#elseif section = "form">
-        <h3 class="d-flex align-items-center"><img src="${url.resourcesPath}/img/next-btn.svg" alt="" class="pr-3"> Confirm OTP</h3>
+        <h3 class="d-flex align-items-center"><a onclick="window.location.reload()"><img src="${url.resourcesPath}/img/next-btn.svg" alt="" class="pr-3"></a> Confirm OTP</h3>
         <div class="ndear-login-card-wrapper">
             <span id="mobile-label">Enter the code sent to </span>
             <div class="box-container">
@@ -60,6 +65,11 @@
                             </div>
                             <div class="mt-2" id="resend-timer"></div>
                             <div class="mt-2 d-none" id="resend-msg">Didn’t receive code? <a class="register-link" onclick="window.location.reload()">Send again</a></div>
+                            <#if properties.mockOTP = "true">
+                                <div class="green-label">
+                                    <span>Please enter OTP as '${properties.mockOTPValue}' as this is a demo portal</span>
+                                </div>
+                            </#if>
                             <input type="hidden" id="type-hidden-input" name="form_type" value="verify_otp"/>
                             <button class="submit" type="submit" tabindex="3">
                                 <span>Verify</span>

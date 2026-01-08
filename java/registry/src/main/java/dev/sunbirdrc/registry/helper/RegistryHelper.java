@@ -10,49 +10,64 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.flipkart.zjsonpatch.JsonPatch;
-import dev.sunbirdrc.pojos.PluginResponseMessage;
-import dev.sunbirdrc.pojos.SunbirdRCInstrumentation;
+import com.jayway.jsonpath.PathNotFoundException;
+import dev.sunbirdrc.actors.factory.PluginRouter;
+import dev.sunbirdrc.pojos.*;
 import dev.sunbirdrc.pojos.attestation.Action;
 import dev.sunbirdrc.pojos.attestation.States;
 import dev.sunbirdrc.pojos.attestation.exception.PolicyNotFoundException;
 import dev.sunbirdrc.registry.entities.AttestationPolicy;
+import dev.sunbirdrc.registry.entities.AttestationType;
+import dev.sunbirdrc.registry.entities.FlowType;
+import dev.sunbirdrc.registry.entities.RevokedCredential;
 import dev.sunbirdrc.registry.exception.SignatureException;
 import dev.sunbirdrc.registry.exception.UnAuthorizedException;
 import dev.sunbirdrc.registry.middleware.MiddlewareHaltException;
+import dev.sunbirdrc.registry.middleware.service.ConditionResolverService;
 import dev.sunbirdrc.registry.middleware.util.JSONUtil;
 import dev.sunbirdrc.registry.middleware.util.OSSystemFields;
 import dev.sunbirdrc.registry.model.DBConnectionInfoMgr;
 import dev.sunbirdrc.registry.model.attestation.EntityPropertyURI;
+import dev.sunbirdrc.registry.model.dto.AttestationRequest;
 import dev.sunbirdrc.registry.service.*;
 import dev.sunbirdrc.registry.sink.shard.Shard;
 import dev.sunbirdrc.registry.sink.shard.ShardManager;
 import dev.sunbirdrc.registry.util.*;
 import dev.sunbirdrc.validators.IValidate;
+import dev.sunbirdrc.views.FunctionDefinition;
+import dev.sunbirdrc.views.FunctionExecutor;
 import dev.sunbirdrc.views.ViewTemplate;
 import dev.sunbirdrc.views.ViewTransformer;
+import io.minio.errors.*;
 import lombok.Setter;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.collections4.ListUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.jetbrains.annotations.NotNull;
 import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.lang.Nullable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.util.DigestUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
+import static dev.sunbirdrc.pojos.attestation.Action.GRANT_CLAIM;
 import static dev.sunbirdrc.registry.Constants.*;
 import static dev.sunbirdrc.registry.exception.ErrorMessages.*;
-import static dev.sunbirdrc.registry.middleware.util.Constants.EMAIL;
-import static dev.sunbirdrc.registry.middleware.util.Constants.MOBILE;
+import static dev.sunbirdrc.registry.middleware.util.Constants.*;
 import static dev.sunbirdrc.registry.middleware.util.OSSystemFields.*;
 
 /**
@@ -61,20 +76,26 @@ import static dev.sunbirdrc.registry.middleware.util.OSSystemFields.*;
 @Component
 @Setter
 public class RegistryHelper {
-
+    private static final String SIGNED_HASH = "signedHash";
     private static final String ATTESTED_DATA = "attestedData";
     private static final String CLAIM_ID = "claimId";
+    private static final String ATTESTATION_RESPONSE = "attestationResponse";
     public static String ROLE_ANONYMOUS = "anonymous";
 
     private static final Logger logger = LoggerFactory.getLogger(RegistryHelper.class);
 
     @Value("${authentication.enabled:true}") boolean securityEnabled;
+    @Value("${notification.service.enabled}") boolean notificationEnabled;
 
     @Autowired
     private ShardManager shardManager;
 
     @Autowired
     RegistryService registryService;
+
+    @Autowired
+    @Qualifier("async")
+    RegistryService registryAsyncService;
 
     @Autowired
     IReadService readService;
@@ -92,7 +113,7 @@ public class RegistryHelper {
     EntityStateHelper entityStateHelper;
 
     @Autowired
-    private DefinitionsManager definitionsManager;
+    private IDefinitionsManager definitionsManager;
 
     @Autowired
     private DBConnectionInfoMgr dbConnectionInfoMgr;
@@ -133,16 +154,16 @@ public class RegistryHelper {
     @Autowired
     private EntityTypeHandler entityTypeHandler;
 
-    public String getAttestationOSID(JsonNode requestBody, String entityName, String entityId, String propertyName) throws Exception {
-        JsonNode resultNode = readEntity("", entityName, entityId, false, null, false)
-                .get(entityName)
-                .get(propertyName);
-        List<String> fieldsToRemove = getFieldsToRemove(entityName);
-        return JSONUtil.getOSIDFromArrNode(resultNode, requestBody, fieldsToRemove);
-    }
-
     @Autowired
     private SignatureService signatureService;
+
+    @Autowired
+    private ConditionResolverService conditionResolverService;
+
+    private FunctionExecutor functionExecutor = new FunctionExecutor();
+
+    @Autowired
+    private AsyncRequest asyncRequest;
 
     public JsonNode removeFormatAttr(JsonNode requestBody) {
         String documents = "documents";
@@ -203,27 +224,35 @@ public class RegistryHelper {
     }
 
     private void sendNotificationToOwners(JsonNode inputJson, String operation, String subject, String message) throws Exception {
-        String entityType = inputJson.fields().next().getKey();
-        for (ObjectNode owners : entityStateHelper.getOwnersData(inputJson, entityType)) {
-            String ownerMobile = owners.get(MOBILE).asText("");
-            String ownerEmail = owners.get(EMAIL).asText("");
-            if (!StringUtils.isEmpty(ownerMobile)) {
-                registryService.callNotificationActors(operation, String.format("tel:%s", ownerMobile), subject, message);
-            }
-            if (!StringUtils.isEmpty(ownerEmail)) {
-                registryService.callNotificationActors(operation, String.format("mailto:%s", ownerEmail), subject, message);
+        if (notificationEnabled) {
+            String entityType = inputJson.fields().next().getKey();
+            for (ObjectNode owners : entityStateHelper.getOwnersData(inputJson, entityType)) {
+                String ownerMobile = owners.get(MOBILE).asText("");
+                String ownerEmail = owners.get(EMAIL).asText("");
+                if (!StringUtils.isEmpty(ownerMobile)) {
+                    registryService.callNotificationActors(operation, String.format("tel:%s", ownerMobile), subject, message);
+                }
+                if (!StringUtils.isEmpty(ownerEmail)) {
+                    registryService.callNotificationActors(operation, String.format("mailto:%s", ownerEmail), subject, message);
+                }
             }
         }
     }
 
     private String addEntity(JsonNode inputJson, String userId, String entityType, boolean skipSignature) throws Exception {
-        RecordIdentifier recordId = null;
+        RecordIdentifier recordId;
         try {
             logger.info("Add api: entity type: {} and shard propery: {}", entityType, shardManager.getShardProperty());
             Shard shard = shardManager.getShard(inputJson.get(entityType).get(shardManager.getShardProperty()));
             watch.start("RegistryController.addToExistingEntity");
-            String resultId = registryService.addEntity(shard, userId, inputJson, skipSignature);
-            recordId = new RecordIdentifier(shard.getShardLabel(), resultId);
+            String resultId;
+            if (asyncRequest.isEnabled()) {
+                resultId = registryAsyncService.addEntity(shard, userId, inputJson, skipSignature);
+                recordId = new RecordIdentifier(null, resultId);
+            } else {
+                resultId = registryService.addEntity(shard, userId, inputJson, skipSignature);
+                recordId = new RecordIdentifier(shard.getShardLabel(), resultId);
+            }
             watch.stop("RegistryController.addToExistingEntity");
             logger.info("AddEntity,{}", recordId.toString());
         } catch (Exception e) {
@@ -248,7 +277,6 @@ public class RegistryHelper {
         boolean includeSignatures = inputJson.get(entityType).get("includeSignatures") != null;
 
         return readEntity(userId, entityType, label, includeSignatures, viewTemplateManager.getViewTemplate(inputJson), requireLDResponse);
-
     }
 
     public JsonNode readEntity(String userId, String entityType, String label, boolean includeSignatures, ViewTemplate viewTemplate, boolean requireLDResponse) throws Exception {
@@ -304,7 +332,6 @@ public class RegistryHelper {
     public JsonNode searchEntity(JsonNode inputJson) throws Exception {
         logger.debug("searchEntity starts");
         JsonNode resultNode = searchService.search(inputJson);
-        removeNonPublicFields((ObjectNode) resultNode);
         ViewTemplate viewTemplate = viewTemplateManager.getViewTemplate(inputJson);
         if (viewTemplate != null) {
             ViewTransformer vTransformer = new ViewTransformer();
@@ -315,38 +342,14 @@ public class RegistryHelper {
         return resultNode;
     }
 
-    private void removeNonPublicFields(ObjectNode searchResultNode) throws Exception {
-        if (searchResultNode != null) {
-            ObjectReader stringListReader = objectMapper.readerFor(new TypeReference<List<String>>() {
-            });
-            List<String> nonPublicNodePathContainers = Arrays.asList(internalFieldsProp, privateFieldsProp);
-            Iterator<Map.Entry<String, JsonNode>> fieldIterator = searchResultNode.fields();
-            while (fieldIterator.hasNext()) {
-                ArrayNode entityResults = (ArrayNode) fieldIterator.next().getValue();
-                for (int i = 0; i < entityResults.size(); i++) {
-                    ObjectNode entityResult = (ObjectNode) entityResults.get(i);
-                    List<String> nodePathsForRemoval = new ArrayList<>();
-                    for (String nodePathContainer : nonPublicNodePathContainers) {
-                        if (entityResult.has(nodePathContainer)) {
-                            nodePathsForRemoval.addAll(stringListReader.readValue(entityResult.get(nodePathContainer)));
-                        }
-                    }
-                    JSONUtil.removeNodesByPath(entityResult, nodePathsForRemoval);
-                    entityResult.remove(nonPublicNodePathContainers);
-                }
-            }
-        }
-    }
-
     /**
      * Updates the input entity, external api's can use this method to update the entity
      *
      * @param inputJson
      * @param userId
-     * @return
      * @throws Exception
      */
-    private String updateEntity(JsonNode inputJson, String userId) throws Exception {
+    private void updateEntity(JsonNode inputJson, String userId) throws Exception {
         logger.debug("updateEntity starts");
         String entityType = inputJson.fields().next().getKey();
         String jsonString = objectMapper.writeValueAsString(inputJson);
@@ -357,7 +360,6 @@ public class RegistryHelper {
         logger.info("Update Api: shard id: " + recordId.getShardLabel() + " for uuid: " + recordId.getUuid());
         registryService.updateEntity(shard, userId, recordId.getUuid(), jsonString);
         logger.debug("updateEntity ends");
-        return "SUCCESS";
     }
 
     public String updateProperty(JsonNode inputJson, String userId) throws Exception {
@@ -372,18 +374,13 @@ public class RegistryHelper {
         return "SUCCESS";
     }
 
-    public String updateEntityAndState(JsonNode inputJson, String userId) throws Exception {
-        JsonNode existingNode = readEntity(inputJson, userId);
-        return updateEntityAndState(existingNode, inputJson, userId);
-    }
-
-    private String updateEntityAndState(JsonNode existingNode, JsonNode updatedNode, String userId) throws Exception {
+    public void updateEntityAndState(JsonNode existingNode, JsonNode updatedNode, String userId) throws Exception {
         if (workflowEnabled) {
             String entityName = updatedNode.fields().next().getKey();
             List<AttestationPolicy> attestationPolicies = getAttestationPolicies(entityName);
             entityStateHelper.applyWorkflowTransitions(existingNode, updatedNode, attestationPolicies);
         }
-        return updateEntity(updatedNode, userId);
+        updateEntity(updatedNode, userId);
     }
 
     public void addEntityProperty(String entityName, String entityId, JsonNode inputJson, HttpServletRequest request) throws Exception {
@@ -402,16 +399,71 @@ public class RegistryHelper {
         updateEntityAndState(existingNode, updateNode, "");
     }
 
-    public String addAttestationProperty(String entityName, String entityId, String propertyName, JsonNode inputJson, HttpServletRequest request) throws Exception {
-        String userId = getUserId(request, entityName);
-        JsonNode existingEntityNode = readEntity(userId, entityName, entityId, false, null, false);
-        JsonNode nodeToUpdate = existingEntityNode.deepCopy();
-        JsonNode parentNode = nodeToUpdate.get(entityName);
-        JsonNode propertyNode = parentNode.get(propertyName);
-        createOrUpdateProperty(entityName, inputJson, nodeToUpdate, propertyName, (ObjectNode) parentNode, propertyNode);
-        return updateEntityAndState(existingEntityNode, nodeToUpdate, userId);
+    public String triggerAttestation(AttestationRequest attestationRequest, AttestationPolicy attestationPolicy) throws Exception {
+        addAttestationProperty(attestationRequest);
+        //TODO: remove reading the entity after update
+        String attestationOSID = getAttestationOSID(attestationRequest);
+
+        String condition = "";
+        if (attestationPolicy.isInternal()) {
+            // Resolve condition for REQUESTER
+            condition = conditionResolverService.resolve(attestationRequest.getPropertyData(), REQUESTER,
+                    attestationPolicy.getConditions(), Collections.emptyList());
+        }
+
+        updateGetFileUrl(attestationRequest.getAdditionalInput());
+
+        PluginRequestMessage message = PluginRequestMessageCreator.create(
+                attestationRequest.getPropertyData().toString(), condition, attestationOSID, attestationRequest.getEntityName(),
+                attestationRequest.getEmailId(), attestationRequest.getEntityId(), attestationRequest.getAdditionalInput(),
+                Action.RAISE_CLAIM.name(), attestationPolicy.getName(), attestationPolicy.getAttestorPlugin(),
+                attestationPolicy.getAttestorEntity(), attestationPolicy.getAttestorSignin(),
+                attestationRequest.getPropertiesOSID(), attestationRequest.getEmailId());
+
+        PluginRouter.route(message);
+        return attestationOSID;
     }
 
+
+    private void updateGetFileUrl(JsonNode additionalInput) {
+        if(additionalInput!= null && additionalInput.has(FILE_URL)) {
+            ArrayNode fileUrls = (ArrayNode)(additionalInput.get(FILE_URL));
+            ArrayNode signedUrls = JsonNodeFactory.instance.arrayNode();
+            for (JsonNode fileNode : fileUrls) {
+                String fileUrl = fileNode.asText();
+                try {
+                    String sharableUrl = fileStorageService.getSignedUrl(fileUrl);
+                    signedUrls.add(sharableUrl);
+                } catch (ServerException | InternalException | XmlParserException | InvalidResponseException
+                         | InvalidKeyException | NoSuchAlgorithmException | IOException
+                         | ErrorResponseException | InsufficientDataException e) {
+                    e.printStackTrace();
+                }
+            }
+            ((ObjectNode)additionalInput).replace(FILE_URL, signedUrls);
+        }
+    }
+
+    private String getAttestationOSID(AttestationRequest attestationRequest) throws Exception {
+        JsonNode resultNode = readEntity("", attestationRequest.getEntityName(), attestationRequest.getEntityId(),
+                false, null, false)
+                .get(attestationRequest.getEntityName())
+                .get(attestationRequest.getName());
+        List<String> fieldsToRemove = getFieldsToRemove(attestationRequest.getEntityName());
+        return JSONUtil.getOSIDFromArrNode(resultNode, JSONUtil.convertObjectJsonNode(attestationRequest), fieldsToRemove);
+    }
+
+    private void addAttestationProperty(AttestationRequest attestationRequest) throws Exception {
+        JsonNode existingEntityNode = readEntity(attestationRequest.getUserId(), attestationRequest.getEntityName(),
+                attestationRequest.getEntityId(), false, null, false);
+        JsonNode nodeToUpdate = existingEntityNode.deepCopy();
+        JsonNode parentNode = nodeToUpdate.get(attestationRequest.getEntityName());
+        JsonNode propertyNode = parentNode.get(attestationRequest.getName());
+        ObjectNode attestationJsonNode = (ObjectNode) JSONUtil.convertObjectJsonNode(attestationRequest);
+        attestationJsonNode.set("propertyData", JsonNodeFactory.instance.textNode(attestationRequest.getPropertyData().toString()));
+        createOrUpdateProperty(attestationRequest.getEntityName(), attestationJsonNode, nodeToUpdate, attestationRequest.getName(), (ObjectNode) parentNode, propertyNode);
+        updateEntityAndState(existingEntityNode, nodeToUpdate, attestationRequest.getUserId());
+    }
     private void createOrUpdateProperty(String entityName, JsonNode inputJson, JsonNode updateNode, String propertyName, ObjectNode parentNode, JsonNode propertyNode) throws JsonProcessingException {
         if (propertyNode != null && !propertyNode.isMissingNode()) {
             updateProperty(inputJson, propertyName, parentNode, propertyNode);
@@ -462,9 +514,8 @@ public class RegistryHelper {
         return parentNode;
     }
 
-    public void updateEntityProperty(String entityName, String entityId, JsonNode inputJson, HttpServletRequest request) throws Exception {
+    public void updateEntityProperty(String entityName, String entityId, JsonNode inputJson, HttpServletRequest request, JsonNode existingNode) throws Exception {
         String propertyURI = getPropertyURI(entityId, request);
-        JsonNode existingNode = readEntity("", entityName, entityId, false, null, false);
         JsonNode updateNode = existingNode.deepCopy();
 
         Optional<EntityPropertyURI> entityPropertyURI = EntityPropertyURI
@@ -542,6 +593,59 @@ public class RegistryHelper {
         uploadAttestedFiles(pluginResponseMessage, metaData);
         JsonNode nodeToUpdate = entityStateHelper.manageState(attestationPolicy, root, propertyURI, action, metaData);
         updateEntity(nodeToUpdate, userId);
+        triggerNextFLowIfExists(pluginResponseMessage, sourceEntity, attestationPolicy, action, nodeToUpdate, userId);
+    }
+
+    private void triggerNextFLowIfExists(PluginResponseMessage pluginResponseMessage, String sourceEntity,
+                                         AttestationPolicy attestationPolicy, Action action, JsonNode sourceNode, String userId) throws Exception {
+        if (action == GRANT_CLAIM && !StringUtils.isEmpty(attestationPolicy.getOnComplete())) {
+            if (attestationPolicy.getCompletionType() == FlowType.ATTESTATION) {
+                try {
+                    AttestationPolicy nextAttestationPolicy = getAttestationPolicy(sourceEntity, attestationPolicy.getCompletionValue());
+                    AttestationRequest attestationRequest = AttestationRequest.builder().entityName(pluginResponseMessage.getSourceEntity())
+                            .entityId(pluginResponseMessage.getSourceOSID()).name(attestationPolicy.getCompletionValue())
+                            .additionalInput(pluginResponseMessage.getAdditionalData()).emailId(pluginResponseMessage.getEmailId())
+                            .userId(pluginResponseMessage.getUserId()).propertiesOSID(pluginResponseMessage.getPropertiesOSID())
+                            .propertyData(JSONUtil.convertStringJsonNode(pluginResponseMessage.getResponse())).build();
+                    triggerAttestation(attestationRequest, nextAttestationPolicy);
+                } catch (PolicyNotFoundException e) {
+                    logger.error("Next level attestation policy not found:", e);
+                }
+            } else if (attestationPolicy.getCompletionType() == FlowType.FUNCTION) {
+                FunctionDefinition functionDefinition = definitionsManager.getDefinition(sourceEntity).getOsSchemaConfiguration()
+                        .getFunctionDefinition(attestationPolicy.getCompletionFunctionName());
+                if (functionDefinition != null ) {
+                    try {
+                        JsonNode inputJsonNode = generateInputForFunctionExecutor(sourceEntity, sourceNode.deepCopy(), pluginResponseMessage);
+                        JsonNode executedJsonNode = functionExecutor.execute(attestationPolicy.getCompletionValue(), functionDefinition, inputJsonNode);
+                        ObjectNode updatedNode = convertToSourceNode(sourceEntity, (ObjectNode) executedJsonNode);
+                        if (JSONUtil.diffJsonNode(sourceNode, updatedNode).size() > 0) {
+                            updateEntity(updatedNode, userId);
+                        }
+                    } catch (JsonProcessingException e) {
+                        logger.error("Exception while executing function definition: {} {}", attestationPolicy.getOnComplete(), functionDefinition, e);
+                    }
+                } else {
+                    logger.error("Invalid function name specified for onComplete: {}", attestationPolicy.getOnComplete());
+                }
+            } else {
+                logger.error("Invalid on complete config {}", attestationPolicy.getOnComplete());
+            }
+        }
+    }
+
+    @NotNull
+    private ObjectNode convertToSourceNode(String sourceEntity, ObjectNode executedJsonNode) {
+        ObjectNode updatedNode = JsonNodeFactory.instance.objectNode();
+        executedJsonNode.remove(ATTESTATION_RESPONSE);
+        updatedNode.set(sourceEntity, executedJsonNode);
+        return updatedNode;
+    }
+
+    private JsonNode generateInputForFunctionExecutor(String sourceEntity, JsonNode sourceNode, PluginResponseMessage pluginResponseMessage) throws IOException {
+        ObjectNode jsonNode = (ObjectNode) sourceNode.get(sourceEntity);
+        jsonNode.set(ATTESTATION_RESPONSE, JSONUtil.convertObjectJsonNode(pluginResponseMessage));
+        return jsonNode;
     }
 
     private void uploadAttestedFiles(PluginResponseMessage pluginResponseMessage, ObjectNode metaData) throws Exception {
@@ -581,7 +685,7 @@ public class RegistryHelper {
 
         ArrayNode newEntityArrNode = objectMapper.createArrayNode();
         newEntityArrNode.add(entityType + auditSuffixSeparator + auditSuffix);
-        ((ObjectNode) queryNode).set("entityType", newEntityArrNode);
+        ((ObjectNode) queryNode).set(ENTITY_TYPE, newEntityArrNode);
 
         JsonNode resultNode = searchService.search(queryNode);
 
@@ -616,6 +720,10 @@ public class RegistryHelper {
         if(!securityEnabled){
             return DEFAULT_USER;
         }
+        return getKeycloakUserId(request);
+    }
+
+    public String getKeycloakUserId(HttpServletRequest request) throws Exception {
         KeycloakAuthenticationToken principal = (KeycloakAuthenticationToken) request.getUserPrincipal();
         if (principal != null) {
             return principal.getAccount().getPrincipal().getName();
@@ -633,7 +741,7 @@ public class RegistryHelper {
                     return principal.getAccount().getPrincipal().getName();
                 }
             }
-            throw new Exception("Forbidden");
+            return USER_ANONYMOUS;
         } else {
             return dev.sunbirdrc.registry.Constants.USER_ANONYMOUS;
         }
@@ -667,10 +775,10 @@ public class RegistryHelper {
         String userId = getUserId(request,entityName);
         if (userId != null) {
             ObjectNode payload = JsonNodeFactory.instance.objectNode();
-            payload.set("entityType", JsonNodeFactory.instance.arrayNode().add(entityName));
+            payload.set(ENTITY_TYPE, JsonNodeFactory.instance.arrayNode().add(entityName));
             ObjectNode filters = JsonNodeFactory.instance.objectNode();
             filters.set(OSSystemFields.osOwner.toString(), JsonNodeFactory.instance.objectNode().put("contains", userId));
-            payload.set("filters", filters);
+            payload.set(FILTERS, filters);
 
             watch.start("RegistryController.searchEntity");
             JsonNode result = searchEntity(payload);
@@ -680,13 +788,21 @@ public class RegistryHelper {
         throw new Exception("Forbidden");
     }
 
-    public void authorize(String entityName, String entityId, HttpServletRequest request) throws Exception {
+    public String authorize(String entityName, String entityId, HttpServletRequest request) throws Exception {
         String userIdFromRequest = getUserId(request, entityName);
+        if (getManageRoles(entityName).size() > 0) {
+            try {
+                return authorizeManageEntity(request, entityName);
+            } catch (Exception e) {
+                logger.error("Exception while authorizing roles", e);
+            }
+        }
         JsonNode response = readEntity(userIdFromRequest, entityName, entityId, false, null, false);
         JsonNode entityFromDB = response.get(entityName);
-        if (!isOwner(entityFromDB, userIdFromRequest)) {
+        if (doesEntityContainOwnershipAttributes(entityName) && !isOwner(entityFromDB, userIdFromRequest)) {
             throw new Exception(UNAUTHORIZED_OPERATION_MESSAGE);
         }
+        return userIdFromRequest;
     }
 
     public String getPropertyIdAfterSavingTheProperty(String entityName, String entityId, JsonNode requestBody, HttpServletRequest request) throws Exception {
@@ -745,12 +861,10 @@ public class RegistryHelper {
         authorizeUserRole(userRoles, inviteRoles);
     }
 
-    public void authorizeDeleteEntity(HttpServletRequest request, String entityName,String entityId) throws Exception {
-        List<String> deleteRoles = definitionsManager.getDefinition(entityName)
-          .getOsSchemaConfiguration()
-          .getDeleteRoles();
+    public String authorizeDeleteEntity(HttpServletRequest request, String entityName, String entityId) throws Exception {
+        List<String> deleteRoles = getManageRoles(entityName);
         if (deleteRoles.contains(ROLE_ANONYMOUS)) {
-            return;
+            return entityName;
         }
         Set<String> userRoles = getUserRolesFromRequest(request);
         String userIdFromRequest = getUserId(request, entityName);
@@ -758,9 +872,10 @@ public class RegistryHelper {
         JsonNode entityFromDB = response.get(entityName);
         final boolean hasNoValidRole = !deleteRoles.isEmpty() && deleteRoles.stream().noneMatch(userRoles::contains);
         final boolean hasInValidOwnership = !isOwner(entityFromDB, userIdFromRequest);
-        if(hasNoValidRole && hasInValidOwnership){
+        if(hasNoValidRole || hasInValidOwnership){
             throw new UnAuthorizedException(UNAUTHORIZED_OPERATION_MESSAGE);
         }
+        return userIdFromRequest;
     }
 
     public String authorizeManageEntity(HttpServletRequest request, String entityName) throws Exception {
@@ -822,19 +937,23 @@ public class RegistryHelper {
 
     @Async
     public void invalidateAttestation(String entityName, String entityId, String userId, @Nullable String propertyToUpdate) throws Exception {
-        JsonNode entity = readEntity(userId, entityName, entityId, false, null, false)
-                .get(entityName);
+        JsonNode entity = null;
         for (AttestationPolicy attestationPolicy : getAttestationPolicies(entityName)) {
             String policyName = attestationPolicy.getName();
-
+            if (entity == null) {
+                entity = readEntity(userId, entityName, entityId, false, null, false)
+                        .get(entityName);
+            }
             if (entity.has(policyName) && entity.get(policyName).isArray()) {
                 ArrayNode attestations = (ArrayNode) entity.get(policyName);
-                updateAttestation(attestations,propertyToUpdate);
+                updateAttestation(attestations, propertyToUpdate);
             }
         }
-        ObjectNode newRoot = JsonNodeFactory.instance.objectNode();
-        newRoot.set(entityName, entity);
-        updateEntity(newRoot, userId);
+        if (entity != null) {
+            ObjectNode newRoot = JsonNodeFactory.instance.objectNode();
+            newRoot.set(entityName, entity);
+            updateEntity(newRoot, userId);
+        }
     }
 
     public String getPropertyToUpdate(HttpServletRequest request, String entityId){
@@ -857,7 +976,7 @@ public class RegistryHelper {
             SignatureException.CreationException, SignatureException.UnreachableException {
         Map<String, Object> requestBodyMap = new HashMap<>();
         requestBodyMap.put("data", result);
-        requestBodyMap.put("credentialTemplate", credentialTemplate);
+        requestBodyMap.put(CREDENTIAL_TEMPLATE, credentialTemplate);
         return signatureService.sign(requestBodyMap);
     }
 
@@ -878,11 +997,11 @@ public class RegistryHelper {
         }
     }
 
-    public void deleteEntity(String entityId, String userId) throws Exception {
+    public Vertex deleteEntity(String entityId, String userId) throws Exception {
         RecordIdentifier recordId = RecordIdentifier.parse(entityId);
         String shardId = dbConnectionInfoMgr.getShardId(recordId.getShardLabel());
         Shard shard = shardManager.activateShard(shardId);
-        registryService.deleteEntityById(shard, userId, recordId.getUuid());
+        return registryService.deleteEntityById(shard, userId, recordId.getUuid());
     }
 
     //TODO: add cache
@@ -917,6 +1036,9 @@ public class RegistryHelper {
                 = new TypeReference<List<AttestationPolicy>>() {
         };
         ObjectReader reader = objectMapper.readerFor(typeRef);
+        if (searchResponse.size() == 0) {
+            return Collections.emptyList();
+        }
         return reader.readValue(searchResponse.get(ATTESTATION_POLICY));
     }
 
@@ -936,6 +1058,12 @@ public class RegistryHelper {
     public String createAttestationPolicy(AttestationPolicy attestationPolicy, String userId) throws Exception {
         ObjectNode entity = createJsonNodeForAttestationPolicy(attestationPolicy);
         return addEntityWithoutValidation(entity, userId, ATTESTATION_POLICY);
+    }
+
+    public String addRevokedCredential(JsonNode credential, String userId) throws Exception {
+        ObjectNode entity = JsonNodeFactory.instance.objectNode();
+        entity.set(ATTESTATION_POLICY, credential);
+        return addEntityWithoutValidation(entity, userId, REVOKED_CREDENTIAL);
     }
 
     private ObjectNode createJsonNodeForAttestationPolicy(AttestationPolicy attestationPolicy) {
@@ -977,5 +1105,83 @@ public class RegistryHelper {
 
     public void deleteAttestationPolicy(AttestationPolicy attestationPolicy) throws Exception {
         deleteEntity(attestationPolicy.getOsid(), attestationPolicy.getCreatedBy());
+    }
+
+    private List<String> getEntityValidRoles(String entity) {
+        List<String> manageRoles = getManageRoles(entity);
+        manageRoles.remove(ROLE_ANONYMOUS);
+        return manageRoles;
+    }
+
+    public boolean doesEntityOperationRequireAuthorization(String entity) {
+        return doesEntityContainOwnershipAttributes(entity) || getEntityValidRoles(entity).size() > 0;
+
+    }
+
+    boolean hasAttestationPropertiesChanged(JsonNode updatedNode, JsonNode existingNode, AttestationPolicy attestationPolicy, String entityName) {
+        boolean result = false;
+        List<String> paths = new ArrayList<>(attestationPolicy == null ? CollectionUtils.emptyCollection() : attestationPolicy.getAttestationProperties().values());
+        for(String path : paths) {
+            JsonNode extractedExistingAttestationNode = null;
+            JsonNode extractedUpdatedAttestationNode = null;
+            try {
+                extractedExistingAttestationNode = JSONUtil.extractPropertyDataFromEntity(existingNode.get(entityName), attestationPolicy.getAttestationProperties(), null);
+                extractedUpdatedAttestationNode = JSONUtil.extractPropertyDataFromEntity(updatedNode, attestationPolicy.getAttestationProperties(), null);
+                if(!StringUtils.isEmpty(path) && !(extractedExistingAttestationNode.toString())
+                        .equals(extractedUpdatedAttestationNode.toString())) {
+                    result = true;
+                }
+            } catch (PathNotFoundException e) {
+                result = true;
+            }
+
+        }
+        return result;
+    }
+
+    public void autoRaiseClaim(String entityName, String entityId, String userId, JsonNode existingNode, JsonNode newRootNode, String emailId) throws Exception {
+        List<AttestationPolicy> attestationPolicies = getAttestationPolicies(entityName);
+        for(AttestationPolicy attestationPolicy : attestationPolicies) {
+            if(attestationPolicy.getType() != null && attestationPolicy.getType().equals(AttestationType.AUTOMATED)) {
+                JsonNode updatedNode = readEntity(newRootNode, entityId).get(entityName);
+                if(existingNode == null || hasAttestationPropertiesChanged(updatedNode, existingNode, attestationPolicy, entityName)) {
+                    AttestationRequest attestationRequest = new AttestationRequest();
+                    attestationRequest.setEntityId(entityId);
+                    attestationRequest.setName(attestationPolicy.getName());
+                    attestationRequest.setEntityName(entityName);
+                    JsonNode node = JSONUtil.extractPropertyDataFromEntity(updatedNode, attestationPolicy.getAttestationProperties(), new HashMap<>());
+                    attestationRequest.setPropertyData(node);
+                    attestationRequest.setUserId(userId);
+                    attestationRequest.setEmailId(emailId);
+                    triggerAttestation(attestationRequest, attestationPolicy);
+                }
+            }
+        }
+    }
+
+    public void revokeExistingCredentials(String entity, String entityId, String userId, String signedData) throws Exception {
+        if (!StringUtils.isEmpty(signedData)) {
+            RevokedCredential revokedCredential = RevokedCredential.builder().entity(entity).entityId(entityId)
+                    .signedData(signedData).signedHash(generateHash(signedData)).userId(userId).build();
+            ObjectNode newRootNode = objectMapper.createObjectNode();
+            newRootNode.set(REVOKED_CREDENTIAL, JSONUtil.convertObjectJsonNode(revokedCredential));
+            String revokedId = addEntity(newRootNode, userId, REVOKED_CREDENTIAL, false);
+            logger.info("Added deleted credential to revoked list: {}", revokedId);
+
+        }
+    }
+
+    private String generateHash(String signedData) {
+        return DigestUtils.md5DigestAsHex(signedData.getBytes()).toUpperCase();
+    }
+
+    public boolean checkIfCredentialIsRevoked(String signedData) throws Exception {
+        ObjectNode searchNode = JsonNodeFactory.instance.objectNode();
+        searchNode.set(ENTITY_TYPE, JsonNodeFactory.instance.arrayNode().add(REVOKED_CREDENTIAL));
+        searchNode.set(FILTERS,
+                JsonNodeFactory.instance.objectNode().set(SIGNED_HASH,
+                        JsonNodeFactory.instance.objectNode().put("eq", generateHash(signedData))));
+        JsonNode searchResponse = searchEntity(searchNode);
+        return searchResponse.get(REVOKED_CREDENTIAL) != null && searchResponse.get(REVOKED_CREDENTIAL).size() > 0;
     }
 }
