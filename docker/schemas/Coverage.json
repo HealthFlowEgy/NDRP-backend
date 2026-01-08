@@ -1,0 +1,228 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Coverage",
+  "type": "object",
+  "description": "UHIS (Universal Health Insurance System) Coverage Entity for Egypt NDPR",
+  "properties": {
+    "coverageId": {
+      "type": "string",
+      "title": "Coverage ID",
+      "pattern": "^UHIS-\\d{12}$",
+      "description": "Unique UHIS coverage identifier"
+    },
+    "patientHealthId": {
+      "type": "string",
+      "title": "Patient Health ID",
+      "pattern": "^HID-EG-\\d{8}$",
+      "description": "Reference to Patient's Health ID"
+    },
+    "patientNationalId": {
+      "type": "string",
+      "title": "Patient National ID",
+      "pattern": "^[23]\\d{13}$"
+    },
+    "patientName": {
+      "type": "string",
+      "title": "Patient Name (الاسم)"
+    },
+    "status": {
+      "type": "string",
+      "title": "Coverage Status (حالة التغطية)",
+      "enum": ["active", "cancelled", "suspended", "pending"],
+      "default": "pending"
+    },
+    "tier": {
+      "type": "string",
+      "title": "Coverage Tier (فئة التغطية)",
+      "enum": ["A", "B", "C", "D"],
+      "description": "A=0% copay, B=10% copay, C=20% copay, D=30% copay"
+    },
+    "copayPercentage": {
+      "type": "integer",
+      "title": "Copay Percentage",
+      "enum": [0, 10, 20, 30],
+      "description": "Percentage of cost paid by patient"
+    },
+    "periodStart": {
+      "type": "string",
+      "format": "date",
+      "title": "Coverage Start Date (تاريخ بداية التغطية)"
+    },
+    "periodEnd": {
+      "type": "string",
+      "format": "date",
+      "title": "Coverage End Date (تاريخ نهاية التغطية)"
+    },
+    "subscriberType": {
+      "type": "string",
+      "title": "Subscriber Type (نوع المشترك)",
+      "enum": ["self", "spouse", "child", "dependent", "other"]
+    },
+    "subscriberHealthId": {
+      "type": "string",
+      "title": "Primary Subscriber Health ID",
+      "description": "If dependent, reference to primary subscriber"
+    },
+    "payor": {
+      "type": "object",
+      "title": "Payor Information",
+      "properties": {
+        "id": {
+          "type": "string",
+          "default": "UHIA",
+          "title": "Payor ID"
+        },
+        "name": {
+          "type": "string",
+          "default": "Universal Health Insurance Authority",
+          "title": "Payor Name"
+        },
+        "nameArabic": {
+          "type": "string",
+          "default": "الهيئة العامة للتأمين الصحي الشامل",
+          "title": "Payor Name (Arabic)"
+        }
+      }
+    },
+    "governorate": {
+      "type": "string",
+      "title": "Enrollment Governorate (محافظة التسجيل)",
+      "enum": [
+        "Port Said", "Ismailia", "Suez", "South Sinai", "Luxor", "Aswan",
+        "Cairo", "Alexandria", "Giza", "Qalyubia", "Dakahlia", "Sharqia",
+        "Gharbia", "Monufia", "Beheira", "Kafr El Sheikh", "Damietta",
+        "Beni Suef", "Fayoum", "Minya", "Asyut", "Sohag", "Qena",
+        "Red Sea", "New Valley", "Matruh", "North Sinai"
+      ]
+    },
+    "enrollmentPhase": {
+      "type": "integer",
+      "title": "UHIS Rollout Phase",
+      "enum": [1, 2, 3, 4],
+      "description": "Phase 1: Port Said, Ismailia; Phase 2: Expansion; Phase 3: Metro; Phase 4: National"
+    },
+    "benefitsPackage": {
+      "type": "string",
+      "title": "Benefits Package",
+      "enum": ["basic", "comprehensive", "enhanced"],
+      "default": "comprehensive"
+    },
+    "coveredServices": {
+      "type": "array",
+      "title": "Covered Services",
+      "items": {
+        "type": "string",
+        "enum": [
+          "primary_care",
+          "specialist_care",
+          "emergency",
+          "hospitalization",
+          "surgery",
+          "maternity",
+          "pediatrics",
+          "chronic_disease",
+          "mental_health",
+          "dental_basic",
+          "vision_basic",
+          "medications",
+          "laboratory",
+          "radiology",
+          "rehabilitation"
+        ]
+      },
+      "default": [
+        "primary_care", "specialist_care", "emergency", "hospitalization",
+        "surgery", "maternity", "pediatrics", "chronic_disease",
+        "medications", "laboratory", "radiology"
+      ]
+    },
+    "exclusions": {
+      "type": "array",
+      "title": "Exclusions",
+      "items": {
+        "type": "string"
+      }
+    },
+    "annualLimit": {
+      "type": "object",
+      "title": "Annual Limits",
+      "properties": {
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "default": "EGP" },
+        "used": { "type": "number", "default": 0 }
+      }
+    },
+    "enrollmentDate": {
+      "type": "string",
+      "format": "date",
+      "title": "Enrollment Date (تاريخ التسجيل)"
+    },
+    "enrollmentFacility": {
+      "type": "string",
+      "title": "Enrollment Facility"
+    },
+    "enrolledBy": {
+      "type": "string",
+      "title": "Enrolled By (User ID)"
+    },
+    "lastVerified": {
+      "type": "string",
+      "format": "date-time",
+      "title": "Last Verification Timestamp"
+    },
+    "suspensionReason": {
+      "type": "string",
+      "title": "Suspension Reason"
+    },
+    "cancellationReason": {
+      "type": "string",
+      "title": "Cancellation Reason"
+    },
+    "notes": {
+      "type": "string",
+      "title": "Notes"
+    }
+  },
+  "required": ["patientHealthId", "status", "tier", "periodStart"],
+  "_osConfig": {
+    "osComment": ["Coverage schema for UHIS - Universal Health Insurance System"],
+    "privateFields": [
+      "$.patientNationalId"
+    ],
+    "internalFields": [
+      "$.enrolledBy",
+      "$.suspensionReason",
+      "$.cancellationReason",
+      "$.notes"
+    ],
+    "indexFields": ["coverageId", "patientHealthId", "patientNationalId", "status", "governorate"],
+    "uniqueIndexFields": ["coverageId"],
+    "systemFields": ["osCreatedAt", "osUpdatedAt", "osCreatedBy", "osUpdatedBy", "osid"],
+    "roles": {
+      "patient": {
+        "view": ["coverageId", "status", "tier", "copayPercentage", "periodStart", "periodEnd", "coveredServices", "payor"]
+      },
+      "provider": {
+        "view": ["coverageId", "patientHealthId", "status", "tier", "copayPercentage", "periodStart", "periodEnd", "coveredServices"]
+      },
+      "facility-admin": {
+        "view": ["*"]
+      },
+      "uhis-admin": {
+        "view": ["*"],
+        "update": ["status", "tier", "periodEnd", "suspensionReason", "cancellationReason", "notes"]
+      }
+    },
+    "attestationPolicies": [
+      {
+        "name": "uhisVerification",
+        "type": "MANUAL",
+        "attestorPlugin": "did:internal:UHISVerifier",
+        "attestationProperties": {
+          "status": "$.status",
+          "tier": "$.tier"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,336 @@
+{
+  "Channels": [
+    {
+      "name": "NDPR Patient Registration",
+      "description": "Patient registration and identity resolution via HIP-MPI and HealthFlow Registry",
+      "urlPattern": "^/fhir/Patient.*$",
+      "methods": ["GET", "POST", "PUT"],
+      "type": "http",
+      "priority": 1,
+      "status": "enabled",
+      "authType": "private",
+      "whitelist": [],
+      "allow": ["ndpr-provider", "ndpr-facility", "ndpr-admin"],
+      "routes": [
+        {
+          "name": "Egypt NID Validator",
+          "type": "http",
+          "host": "egypt-nid-validator",
+          "port": 3001,
+          "path": "",
+          "primary": true
+        },
+        {
+          "name": "Arabic Name Normalizer",
+          "type": "http", 
+          "host": "arabic-name-normalizer",
+          "port": 3002,
+          "path": ""
+        },
+        {
+          "name": "HIP-MPI",
+          "type": "http",
+          "host": "hip-mpi",
+          "port": 50000,
+          "path": "/JeMPI"
+        },
+        {
+          "name": "Registry Bridge",
+          "type": "http",
+          "host": "registry-bridge",
+          "port": 3003,
+          "path": ""
+        },
+        {
+          "name": "HealthFlow Registry",
+          "type": "http",
+          "host": "healthflow-registry",
+          "port": 8081,
+          "path": "/api/v1/Patient"
+        }
+      ],
+      "requestBody": true,
+      "responseBody": true,
+      "matchContentTypes": ["application/json", "application/fhir+json"],
+      "properties": [],
+      "txViewAcl": ["ndpr-admin"],
+      "txViewFullAcl": ["ndpr-admin"],
+      "txRerunAcl": ["ndpr-admin"],
+      "alerts": [
+        {
+          "status": "500",
+          "groups": ["ndpr-alerts"],
+          "failureRate": 10
+        }
+      ]
+    },
+    
+    {
+      "name": "NDPR Clinical Data",
+      "description": "Clinical data submission to HIP-FHIR with patient resolution",
+      "urlPattern": "^/fhir/Bundle.*$",
+      "methods": ["POST"],
+      "type": "http",
+      "priority": 1,
+      "status": "enabled",
+      "authType": "private",
+      "allow": ["ndpr-provider", "ndpr-facility"],
+      "routes": [
+        {
+          "name": "Patient Resolver",
+          "type": "http",
+          "host": "registry-bridge",
+          "port": 3003,
+          "path": "/resolve-patient",
+          "primary": true
+        },
+        {
+          "name": "HIP-FHIR",
+          "type": "http",
+          "host": "hip-fhir",
+          "port": 8080,
+          "path": "/fhir"
+        }
+      ],
+      "requestBody": true,
+      "responseBody": true,
+      "matchContentTypes": ["application/json", "application/fhir+json"]
+    },
+    
+    {
+      "name": "NDPR Coverage Query (UHIS)",
+      "description": "Real-time UHIS eligibility verification",
+      "urlPattern": "^/fhir/Coverage.*$",
+      "methods": ["GET"],
+      "type": "http",
+      "priority": 1,
+      "status": "enabled",
+      "authType": "private",
+      "allow": ["ndpr-provider", "ndpr-facility", "ndpr-pharmacy"],
+      "routes": [
+        {
+          "name": "UHIS Eligibility Mediator",
+          "type": "http",
+          "host": "uhis-eligibility",
+          "port": 3004,
+          "path": "",
+          "primary": true
+        },
+        {
+          "name": "HealthFlow Registry",
+          "type": "http",
+          "host": "healthflow-registry",
+          "port": 8081,
+          "path": "/api/v1/Coverage"
+        }
+      ],
+      "requestBody": false,
+      "responseBody": true,
+      "matchContentTypes": ["application/json", "application/fhir+json"]
+    },
+    
+    {
+      "name": "NDPR Credential Verification",
+      "description": "Public endpoint for verifying W3C Verifiable Credentials",
+      "urlPattern": "^/verify/vc.*$",
+      "methods": ["POST", "GET"],
+      "type": "http",
+      "priority": 1,
+      "status": "enabled",
+      "authType": "public",
+      "routes": [
+        {
+          "name": "Registry PKS",
+          "type": "http",
+          "host": "healthflow-registry",
+          "port": 8081,
+          "path": "/api/v1/verify",
+          "primary": true
+        }
+      ],
+      "requestBody": true,
+      "responseBody": true
+    },
+    
+    {
+      "name": "NDPR Analytics Feed",
+      "description": "Internal analytics data pipeline to HIP-Analytics",
+      "urlPattern": "^/analytics/.*$",
+      "methods": ["POST"],
+      "type": "http",
+      "priority": 2,
+      "status": "enabled",
+      "authType": "private",
+      "allow": ["internal"],
+      "routes": [
+        {
+          "name": "HIP-Stream (Kafka)",
+          "type": "http",
+          "host": "hip-stream-rest",
+          "port": 8082,
+          "path": "/topics",
+          "primary": true
+        }
+      ],
+      "requestBody": true,
+      "responseBody": true
+    },
+    
+    {
+      "name": "NDPR Prescription Link",
+      "description": "Connect patient records with existing HealthFlow digital prescription system",
+      "urlPattern": "^/rx/.*$",
+      "methods": ["GET", "POST"],
+      "type": "http",
+      "priority": 1,
+      "status": "enabled",
+      "authType": "private",
+      "allow": ["ndpr-provider", "ndpr-pharmacy"],
+      "routes": [
+        {
+          "name": "Prescription Link Mediator",
+          "type": "http",
+          "host": "prescription-link",
+          "port": 3005,
+          "path": "",
+          "primary": true
+        }
+      ],
+      "requestBody": true,
+      "responseBody": true
+    }
+  ],
+  
+  "Mediators": [
+    {
+      "urn": "urn:mediator:egypt-nid-validator",
+      "version": "1.0.0",
+      "name": "Egypt National ID Validator",
+      "description": "Validates Egyptian 14-digit National ID, performs Luhn check, extracts DOB/gender/governorate",
+      "endpoints": [
+        {
+          "name": "Validate NID Route",
+          "host": "egypt-nid-validator",
+          "port": 3001,
+          "path": "/validate",
+          "type": "http"
+        }
+      ],
+      "configDefs": [
+        {
+          "param": "strictValidation",
+          "displayName": "Strict Validation",
+          "description": "Reject records with invalid NID format",
+          "type": "bool",
+          "default": true
+        }
+      ]
+    },
+    {
+      "urn": "urn:mediator:arabic-name-normalizer",
+      "version": "1.0.0",
+      "name": "Arabic Name Normalizer",
+      "description": "Standardizes Arabic name variants - removes diacritics, normalizes Al-/El-/Abdel- prefixes",
+      "endpoints": [
+        {
+          "name": "Normalize Route",
+          "host": "arabic-name-normalizer",
+          "port": 3002,
+          "path": "/normalize",
+          "type": "http"
+        }
+      ]
+    },
+    {
+      "urn": "urn:mediator:registry-bridge",
+      "version": "1.0.0",
+      "name": "Registry Bridge Mediator",
+      "description": "Transforms FHIR Patient ↔ HealthFlow Registry JSON-LD schema, handles attestation workflows",
+      "endpoints": [
+        {
+          "name": "Transform Route",
+          "host": "registry-bridge",
+          "port": 3003,
+          "path": "/transform",
+          "type": "http"
+        },
+        {
+          "name": "Resolve Patient Route",
+          "host": "registry-bridge",
+          "port": 3003,
+          "path": "/resolve-patient",
+          "type": "http"
+        }
+      ]
+    },
+    {
+      "urn": "urn:mediator:uhis-eligibility",
+      "version": "1.0.0",
+      "name": "UHIS Eligibility Mediator",
+      "description": "Real-time Coverage resource lookup against HealthFlow Registry for insurance verification",
+      "endpoints": [
+        {
+          "name": "Check Eligibility Route",
+          "host": "uhis-eligibility",
+          "port": 3004,
+          "path": "/check",
+          "type": "http"
+        }
+      ]
+    },
+    {
+      "urn": "urn:mediator:prescription-link",
+      "version": "1.0.0",
+      "name": "Prescription Link Mediator",
+      "description": "Connects NDPR with existing HealthFlow digital prescription infrastructure",
+      "endpoints": [
+        {
+          "name": "Link Prescriptions Route",
+          "host": "prescription-link",
+          "port": 3005,
+          "path": "/link",
+          "type": "http"
+        }
+      ]
+    }
+  ],
+  
+  "Clients": [
+    {
+      "clientID": "ndpr-ehr-system",
+      "name": "NDPR EHR Systems",
+      "roles": ["ndpr-provider"],
+      "passwordHash": ""
+    },
+    {
+      "clientID": "ndpr-lab-system",
+      "name": "NDPR Laboratory Systems",
+      "roles": ["ndpr-provider"],
+      "passwordHash": ""
+    },
+    {
+      "clientID": "ndpr-pharmacy-system",
+      "name": "NDPR Pharmacy Systems",
+      "roles": ["ndpr-pharmacy"],
+      "passwordHash": ""
+    },
+    {
+      "clientID": "ndpr-facility-admin",
+      "name": "NDPR Facility Administration",
+      "roles": ["ndpr-facility"],
+      "passwordHash": ""
+    },
+    {
+      "clientID": "ndpr-admin",
+      "name": "NDPR System Administration",
+      "roles": ["ndpr-admin"],
+      "passwordHash": ""
+    },
+    {
+      "clientID": "internal-services",
+      "name": "Internal Service Communication",
+      "roles": ["internal"],
+      "passwordHash": ""
+    }
+  ]
+}

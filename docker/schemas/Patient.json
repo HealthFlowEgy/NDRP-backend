@@ -1,0 +1,258 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Patient",
+  "type": "object",
+  "definitions": {
+    "Address": {
+      "type": "object",
+      "title": "Address",
+      "properties": {
+        "street": { "type": "string", "title": "Street Address" },
+        "district": { "type": "string", "title": "District" },
+        "city": { "type": "string", "title": "City" },
+        "governorate": { "type": "string", "title": "Governorate" },
+        "postalCode": { "type": "string", "title": "Postal Code" }
+      }
+    }
+  },
+  "properties": {
+    "nationalId": {
+      "type": "string",
+      "title": "National ID (الرقم القومي)",
+      "pattern": "^[23]\\d{13}$",
+      "description": "Egyptian 14-digit National ID"
+    },
+    "healthId": {
+      "type": "string",
+      "title": "Health ID",
+      "pattern": "^HID-EG-\\d{8}$",
+      "description": "System-generated unique Health ID"
+    },
+    "fullNameArabic": {
+      "type": "string",
+      "title": "Full Name (Arabic) - الاسم بالكامل",
+      "minLength": 5,
+      "maxLength": 200
+    },
+    "fullNameEnglish": {
+      "type": "string",
+      "title": "Full Name (English)",
+      "minLength": 5,
+      "maxLength": 200
+    },
+    "birthDate": {
+      "type": "string",
+      "format": "date",
+      "title": "Date of Birth (تاريخ الميلاد)"
+    },
+    "gender": {
+      "type": "string",
+      "title": "Gender (النوع)",
+      "enum": ["male", "female"]
+    },
+    "birthGovernorate": {
+      "type": "string",
+      "title": "Birth Governorate (محافظة الميلاد)",
+      "enum": [
+        "Cairo", "Alexandria", "Port Said", "Suez", "Damietta", "Dakahlia",
+        "Sharqia", "Qalyubia", "Kafr El Sheikh", "Gharbia", "Monufia", "Beheira",
+        "Ismailia", "Giza", "Beni Suef", "Fayoum", "Minya", "Asyut", "Sohag",
+        "Qena", "Aswan", "Luxor", "Red Sea", "New Valley", "Matruh",
+        "North Sinai", "South Sinai", "Outside Egypt"
+      ]
+    },
+    "currentGovernorate": {
+      "type": "string",
+      "title": "Current Governorate (المحافظة الحالية)",
+      "enum": [
+        "Cairo", "Alexandria", "Port Said", "Suez", "Damietta", "Dakahlia",
+        "Sharqia", "Qalyubia", "Kafr El Sheikh", "Gharbia", "Monufia", "Beheira",
+        "Ismailia", "Giza", "Beni Suef", "Fayoum", "Minya", "Asyut", "Sohag",
+        "Qena", "Aswan", "Luxor", "Red Sea", "New Valley", "Matruh",
+        "North Sinai", "South Sinai"
+      ]
+    },
+    "mobileNumber": {
+      "type": "string",
+      "title": "Mobile Number (رقم الموبايل)",
+      "pattern": "^(\\+20|0)?1[0125]\\d{8}$"
+    },
+    "email": {
+      "type": "string",
+      "format": "email",
+      "title": "Email Address"
+    },
+    "address": {
+      "$ref": "#/definitions/Address",
+      "title": "Address (العنوان)"
+    },
+    "motherName": {
+      "type": "string",
+      "title": "Mother's Name (اسم الأم)"
+    },
+    "fatherName": {
+      "type": "string",
+      "title": "Father's Name (اسم الأب)"
+    },
+    "bloodType": {
+      "type": "string",
+      "title": "Blood Type (فصيلة الدم)",
+      "enum": ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-", "Unknown"]
+    },
+    "maritalStatus": {
+      "type": "string",
+      "title": "Marital Status (الحالة الاجتماعية)",
+      "enum": ["single", "married", "divorced", "widowed"]
+    },
+    "emergencyContact": {
+      "type": "object",
+      "title": "Emergency Contact (جهة اتصال للطوارئ)",
+      "properties": {
+        "name": { "type": "string", "title": "Name" },
+        "relationship": { "type": "string", "title": "Relationship" },
+        "phone": { "type": "string", "title": "Phone Number" }
+      }
+    },
+    "uhisStatus": {
+      "type": "string",
+      "title": "UHIS Status (حالة التأمين الصحي)",
+      "enum": ["enrolled", "pending", "exempt", "not_enrolled"],
+      "default": "pending"
+    },
+    "uhisTier": {
+      "type": "string",
+      "title": "UHIS Tier (فئة التأمين)",
+      "enum": ["A", "B", "C", "D"],
+      "description": "A=0%, B=10%, C=20%, D=30% copay"
+    },
+    "uhisEnrollmentDate": {
+      "type": "string",
+      "format": "date",
+      "title": "UHIS Enrollment Date"
+    },
+    "photo": {
+      "type": "string",
+      "format": "uri",
+      "title": "Photo URL"
+    },
+    "active": {
+      "type": "boolean",
+      "title": "Active Status",
+      "default": true
+    },
+    "deceasedDate": {
+      "type": "string",
+      "format": "date",
+      "title": "Deceased Date"
+    },
+    "nidVerified": {
+      "type": "boolean",
+      "title": "NID Verified",
+      "default": false
+    },
+    "nidVerifiedAt": {
+      "type": "string",
+      "format": "date-time",
+      "title": "NID Verification Timestamp"
+    }
+  },
+  "required": ["nationalId", "fullNameArabic", "birthDate", "gender", "mobileNumber"],
+  "_osConfig": {
+    "osComment": ["Patient schema for Egypt NDPR - National Digital Patient Registry"],
+    "privateFields": [
+      "$.nationalId",
+      "$.fullNameArabic",
+      "$.fullNameEnglish",
+      "$.birthDate",
+      "$.mobileNumber",
+      "$.email",
+      "$.address",
+      "$.motherName",
+      "$.fatherName",
+      "$.emergencyContact",
+      "$.photo"
+    ],
+    "internalFields": [
+      "$.healthId",
+      "$.uhisStatus",
+      "$.uhisTier",
+      "$.nidVerified",
+      "$.nidVerifiedAt"
+    ],
+    "indexFields": ["nationalId", "healthId", "mobileNumber", "fullNameArabic"],
+    "uniqueIndexFields": ["nationalId", "healthId"],
+    "systemFields": ["osCreatedAt", "osUpdatedAt", "osCreatedBy", "osUpdatedBy", "osOwner", "osid"],
+    "attestationPolicies": [
+      {
+        "name": "nidVerification",
+        "type": "AUTOMATED",
+        "attestationProperties": {
+          "nidVerified": "$.nidVerified"
+        },
+        "credentialTemplate": {
+          "@context": ["https://www.w3.org/2018/credentials/v1"],
+          "type": ["VerifiableCredential", "NIDVerificationCredential"]
+        }
+      },
+      {
+        "name": "uhisEnrollment",
+        "type": "MANUAL",
+        "attestorPlugin": "did:internal:UHISAttestor",
+        "attestationProperties": {
+          "uhisStatus": "$.uhisStatus",
+          "uhisTier": "$.uhisTier"
+        }
+      }
+    ],
+    "credentialTemplate": {
+      "@context": [
+        "https://www.w3.org/2018/credentials/v1",
+        "https://healthflow.eg/credentials/patient/v1"
+      ],
+      "type": ["VerifiableCredential", "PatientHealthCard"],
+      "issuanceDate": "{{osCreatedAt}}",
+      "credentialSubject": {
+        "type": "Patient",
+        "id": "did:healthflow:patient:{{healthId}}",
+        "healthId": "{{healthId}}",
+        "name": "{{fullNameArabic}}",
+        "birthDate": "{{birthDate}}",
+        "gender": "{{gender}}",
+        "uhisStatus": "{{uhisStatus}}",
+        "uhisTier": "{{uhisTier}}"
+      }
+    },
+    "certificateTemplates": {
+      "PatientHealthCard": "https://healthflow.eg/templates/patient-card.html"
+    },
+    "roles": {
+      "patient": {
+        "view": ["healthId", "fullNameArabic", "birthDate", "gender", "uhisStatus", "uhisTier"],
+        "update": ["mobileNumber", "email", "address", "emergencyContact"]
+      },
+      "provider": {
+        "view": ["healthId", "fullNameArabic", "fullNameEnglish", "birthDate", "gender", "mobileNumber", "bloodType", "uhisStatus", "uhisTier"]
+      },
+      "facility-admin": {
+        "view": ["*"],
+        "update": ["address", "currentGovernorate", "emergencyContact"]
+      },
+      "data-steward": {
+        "view": ["*"],
+        "update": ["fullNameArabic", "fullNameEnglish", "motherName", "fatherName", "active"]
+      },
+      "uhis-admin": {
+        "view": ["*"],
+        "update": ["uhisStatus", "uhisTier", "uhisEnrollmentDate"]
+      }
+    },
+    "inviteRoles": ["patient"],
+    "ownershipAttributes": [
+      {
+        "email": "/email",
+        "mobile": "/mobileNumber",
+        "userId": "/osOwner"
+      }
+    ]
+  }
+}

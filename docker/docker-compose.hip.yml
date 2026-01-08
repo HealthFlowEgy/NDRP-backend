@@ -1,0 +1,255 @@
+# OpenHIM & HIP Services Docker Compose Overlay
+# Merge with existing docker-compose.yml using: docker-compose -f docker-compose.yml -f docker-compose.hip.yml up -d
+
+version: '3.8'
+
+services:
+  # ===========================================
+  # HIP CORE (OpenHIM)
+  # ===========================================
+  openhim-core:
+    image: jembi/openhim-core:8
+    container_name: ndpr-openhim-core
+    restart: unless-stopped
+    environment:
+      - mongo_url=mongodb://mongo-openhim:27017/openhim
+      - mongo_atnaUrl=mongodb://mongo-openhim:27017/openhim
+      - api_authenticationTypes=["token", "basic", "openid", "local"]
+    ports:
+      - "8080:8080"   # API
+      - "5000:5000"   # Transaction (HTTP)
+      - "5001:5001"   # Transaction (HTTPS)
+      - "5052:5052"   # Mediator registration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - mongo-openhim
+    networks:
+      - ndpr-network
+
+  openhim-console:
+    image: jembi/openhim-console:1.18
+    container_name: ndpr-openhim-console
+    restart: unless-stopped
+    ports:
+      - "9000:80"
+    networks:
+      - ndpr-network
+
+  mongo-openhim:
+    image: mongo:6
+    container_name: ndpr-mongo-openhim
+    restart: unless-stopped
+    volumes:
+      - mongo-openhim-data:/data/db
+    networks:
+      - ndpr-network
+
+  # ===========================================
+  # HIP-MPI (JeMPI)
+  # ===========================================
+  jempi-api:
+    image: jembi/jempi-api:latest
+    container_name: ndpr-jempi-api
+    restart: unless-stopped
+    environment:
+      - API_PORT=50000
+      - POSTGRESQL_HOST=db
+      - POSTGRESQL_PORT=5432
+      - POSTGRESQL_DATABASE=jempi
+      - POSTGRESQL_USER=postgres
+      - POSTGRESQL_PASSWORD=${POSTGRES_PASSWORD}
+      - DGRAPH_HOSTS=dgraph-alpha:9080
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    ports:
+      - "50000:50000"
+    depends_on:
+      - dgraph-alpha
+      - kafka
+    networks:
+      - ndpr-network
+
+  dgraph-alpha:
+    image: dgraph/dgraph:v23.0.0
+    container_name: ndpr-dgraph-alpha
+    restart: unless-stopped
+    command: dgraph alpha --my=dgraph-alpha:7080 --zero=dgraph-zero:5080
+    volumes:
+      - dgraph-alpha-data:/dgraph
+    ports:
+      - "8082:8080"
+      - "9080:9080"
+    depends_on:
+      - dgraph-zero
+    networks:
+      - ndpr-network
+
+  dgraph-zero:
+    image: dgraph/dgraph:v23.0.0
+    container_name: ndpr-dgraph-zero
+    restart: unless-stopped
+    command: dgraph zero --my=dgraph-zero:5080
+    volumes:
+      - dgraph-zero-data:/dgraph
+    ports:
+      - "5080:5080"
+      - "6080:6080"
+    networks:
+      - ndpr-network
+
+  # ===========================================
+  # HIP-FHIR (HAPI FHIR)
+  # ===========================================
+  hapi-fhir:
+    image: hapiproject/hapi:v6.8.0
+    container_name: ndpr-hapi-fhir
+    restart: unless-stopped
+    environment:
+      - spring.datasource.url=jdbc:postgresql://db:5432/hapi
+      - spring.datasource.username=postgres
+      - spring.datasource.password=${POSTGRES_PASSWORD}
+      - hapi.fhir.fhir_version=R4
+      - hapi.fhir.allow_external_references=true
+    ports:
+      - "8083:8080"
+    depends_on:
+      - db
+    networks:
+      - ndpr-network
+
+  # ===========================================
+  # HIP-STREAM (Apache Kafka)
+  # ===========================================
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: ndpr-zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+    networks:
+      - ndpr-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: ndpr-kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    networks:
+      - ndpr-network
+
+  # ===========================================
+  # EGYPT NDPR MEDIATORS
+  # ===========================================
+  egypt-nid-validator:
+    build: ./services/egypt-nid-validator
+    container_name: ndpr-nid-validator
+    restart: unless-stopped
+    environment:
+      - PORT=3001
+      - OPENHIM_API_URL=https://openhim-core:8080
+      - OPENHIM_USERNAME=${OPENHIM_USERNAME:-root@openhim.org}
+      - OPENHIM_PASSWORD=${OPENHIM_PASSWORD:-openhim-password}
+      - STRICT_VALIDATION=true
+    ports:
+      - "3001:3001"
+    depends_on:
+      - openhim-core
+    networks:
+      - ndpr-network
+
+  arabic-name-normalizer:
+    build: ./services/arabic-name-normalizer
+    container_name: ndpr-name-normalizer
+    restart: unless-stopped
+    environment:
+      - PORT=3002
+      - OPENHIM_API_URL=https://openhim-core:8080
+      - OPENHIM_USERNAME=${OPENHIM_USERNAME:-root@openhim.org}
+      - OPENHIM_PASSWORD=${OPENHIM_PASSWORD:-openhim-password}
+    ports:
+      - "3002:3002"
+    depends_on:
+      - openhim-core
+    networks:
+      - ndpr-network
+
+  registry-bridge:
+    build: ./services/registry-bridge
+    container_name: ndpr-registry-bridge
+    restart: unless-stopped
+    environment:
+      - PORT=3003
+      - OPENHIM_API_URL=https://openhim-core:8080
+      - OPENHIM_USERNAME=${OPENHIM_USERNAME:-root@openhim.org}
+      - OPENHIM_PASSWORD=${OPENHIM_PASSWORD:-openhim-password}
+      - REGISTRY_URL=http://registry:8081
+    ports:
+      - "3003:3003"
+    depends_on:
+      - openhim-core
+      - registry
+    networks:
+      - ndpr-network
+
+  uhis-eligibility:
+    build: ./services/uhis-eligibility
+    container_name: ndpr-uhis-eligibility
+    restart: unless-stopped
+    environment:
+      - PORT=3004
+      - OPENHIM_API_URL=https://openhim-core:8080
+      - OPENHIM_USERNAME=${OPENHIM_USERNAME:-root@openhim.org}
+      - OPENHIM_PASSWORD=${OPENHIM_PASSWORD:-openhim-password}
+      - REGISTRY_URL=http://registry:8081
+    ports:
+      - "3004:3004"
+    depends_on:
+      - openhim-core
+      - registry
+    networks:
+      - ndpr-network
+
+  prescription-link:
+    build: ./services/prescription-link
+    container_name: ndpr-prescription-link
+    restart: unless-stopped
+    environment:
+      - PORT=3005
+      - OPENHIM_API_URL=https://openhim-core:8080
+      - OPENHIM_USERNAME=${OPENHIM_USERNAME:-root@openhim.org}
+      - OPENHIM_PASSWORD=${OPENHIM_PASSWORD:-openhim-password}
+      - PRESCRIPTION_API_URL=${PRESCRIPTION_API_URL}
+      - EMD_API_URL=${EMD_API_URL}
+    ports:
+      - "3005:3005"
+    depends_on:
+      - openhim-core
+    networks:
+      - ndpr-network
+
+volumes:
+  mongo-openhim-data:
+  dgraph-alpha-data:
+  dgraph-zero-data:
+  zookeeper-data:
+  kafka-data:
+
+networks:
+  ndpr-network:
+    external: true
