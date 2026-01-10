@@ -1,0 +1,508 @@
+# Egypt NDPR - Full Jembi Platform Integration
+# docker-compose.jembi-platform.yml
+# Version: 2.0 - With proper JeMPI, Analytics, and FHIR IG
+
+version: '3.9'
+
+networks:
+  ndpr-network:
+    driver: overlay
+    attachable: true
+  analytics-network:
+    driver: overlay
+    attachable: true
+
+volumes:
+  postgres-data:
+  mongo-data:
+  dgraph-data:
+  hapi-data:
+  es-data:
+  kafka-data:
+  zookeeper-data:
+  jempi-data:
+  kibana-data:
+
+services:
+  # ===========================================
+  # INTEROPERABILITY LAYER (OpenHIM)
+  # ===========================================
+  
+  openhim-core:
+    image: jembi/openhim-core:8
+    container_name: openhim-core
+    environment:
+      - mongo_url=mongodb://mongo-openhim:27017/openhim
+      - mongo_atnaUrl=mongodb://mongo-openhim:27017/openhim
+      - NODE_ENV=production
+      - authentication_enableJWTAuthentication=true
+    ports:
+      - "8080:8080"   # API
+      - "5000:5000"   # HTTPS
+      - "5001:5001"   # HTTP
+      - "5050:5050"   # Polling
+      - "5052:5052"   # Websocket
+    networks:
+      - ndpr-network
+    depends_on:
+      - mongo-openhim
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  openhim-console:
+    image: jembi/openhim-console:1.18
+    container_name: openhim-console
+    ports:
+      - "9000:80"
+    networks:
+      - ndpr-network
+    environment:
+      - OPENHIM_CORE_MEDIATOR_HOSTNAME=openhim-core
+      - OPENHIM_CORE_API_PORT=8080
+    depends_on:
+      - openhim-core
+
+  mongo-openhim:
+    image: mongo:6
+    container_name: mongo-openhim
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - ndpr-network
+
+  # ===========================================
+  # CLIENT REGISTRY (JeMPI) - PROPERLY CONFIGURED
+  # ===========================================
+  
+  jempi-api:
+    image: jembi/jempi-api:v1.1.0
+    container_name: jempi-api
+    environment:
+      - JEMPI_CONFIG_PATH=/config/jempi-egypt-config.json
+      - DGRAPH_HOSTS=dgraph-alpha:9080
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_CLIENT_ID=jempi-api
+      - POSTGRESQL_IP=postgres
+      - POSTGRESQL_PORT=5432
+      - POSTGRESQL_USER=jempi
+      - POSTGRESQL_PASSWORD=${JEMPI_DB_PASSWORD:-jempi_secret}
+      - POSTGRESQL_DATABASE=jempi
+      - KEYCLOAK_URL=http://keycloak:8080
+      - KEYCLOAK_REALM=ndpr
+      - KEYCLOAK_CLIENT_ID=jempi-api
+      - KEYCLOAK_CLIENT_SECRET=${JEMPI_KC_SECRET}
+      - LOG_LEVEL=INFO
+    volumes:
+      - ./jempi-config/jempi-egypt-config.json:/config/jempi-egypt-config.json:ro
+      - jempi-data:/data
+    ports:
+      - "50000:50000"
+    networks:
+      - ndpr-network
+    depends_on:
+      - dgraph-alpha
+      - dgraph-zero
+      - kafka
+      - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:50000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  jempi-ui:
+    image: jembi/jempi-web:v1.1.0
+    container_name: jempi-ui
+    environment:
+      - REACT_APP_JEMPI_BASE_URL=http://jempi-api:50000
+      - REACT_APP_KC_REALM_URL=http://keycloak:8080/realms/ndpr
+      - REACT_APP_KC_CLIENT_ID=jempi-ui
+    ports:
+      - "3033:3000"
+    networks:
+      - ndpr-network
+    depends_on:
+      - jempi-api
+
+  dgraph-zero:
+    image: dgraph/dgraph:v23.1.0
+    container_name: dgraph-zero
+    command: dgraph zero --my=dgraph-zero:5080 --replicas=1
+    ports:
+      - "5080:5080"
+      - "6080:6080"
+    volumes:
+      - dgraph-data:/dgraph
+    networks:
+      - ndpr-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  dgraph-alpha:
+    image: dgraph/dgraph:v23.1.0
+    container_name: dgraph-alpha
+    command: dgraph alpha --my=dgraph-alpha:7080 --zero=dgraph-zero:5080 --security whitelist=0.0.0.0/0
+    ports:
+      - "8081:8080"
+      - "9080:9080"
+    volumes:
+      - dgraph-data:/dgraph
+    networks:
+      - ndpr-network
+    depends_on:
+      - dgraph-zero
+
+  # ===========================================
+  # FHIR DATA STORE (HAPI FHIR)
+  # ===========================================
+  
+  hapi-fhir:
+    image: hapiproject/hapi:v6.10.0
+    container_name: hapi-fhir
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/hapi
+      - SPRING_DATASOURCE_USERNAME=hapi
+      - SPRING_DATASOURCE_PASSWORD=${HAPI_DB_PASSWORD:-hapi_secret}
+      - SPRING_DATASOURCE_DRIVER_CLASS_NAME=org.postgresql.Driver
+      - SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT=ca.uhn.fhir.jpa.model.dialect.HapiFhirPostgresDialect
+      - HAPI_FHIR_VALIDATION_ENABLED=true
+      - HAPI_FHIR_IMPLEMENTATION_GUIDES=http://fhir.health.gov.eg/ig/patient|1.0.0
+      - HAPI_FHIR_ENFORCE_REFERENTIAL_INTEGRITY=true
+      - HAPI_FHIR_ALLOW_EXTERNAL_REFERENCES=true
+      - HAPI_FHIR_SUBSCRIPTION_RESTHOOK_ENABLED=true
+      - HAPI_FHIR_SUBSCRIPTION_WEBSOCKET_ENABLED=true
+    ports:
+      - "8090:8080"
+    volumes:
+      - hapi-data:/data/hapi
+      - ./fhir-ig:/ig:ro
+    networks:
+      - ndpr-network
+    depends_on:
+      - postgres
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/fhir/metadata"]
+      interval: 30s
+      timeout: 15s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 4G
+        reservations:
+          memory: 2G
+
+  # FHIR Proxy Mediator (Jembi)
+  fhir-proxy:
+    image: jembi/openhim-mediator-fhir-proxy:latest
+    container_name: fhir-proxy
+    environment:
+      - OPENHIM_URL=https://openhim-core:8080
+      - OPENHIM_USERNAME=root@openhim.org
+      - OPENHIM_PASSWORD=${OPENHIM_PASSWORD:-openhim-password}
+      - UPSTREAM_URL=http://hapi-fhir:8080/fhir
+      - VALIDATION_ENABLED=true
+      - TRUST_SELF_SIGNED=true
+    networks:
+      - ndpr-network
+    depends_on:
+      - openhim-core
+      - hapi-fhir
+
+  # ===========================================
+  # MESSAGE BUS (Kafka)
+  # ===========================================
+  
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+    networks:
+      - ndpr-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    ports:
+      - "9092:9092"
+    networks:
+      - ndpr-network
+    depends_on:
+      - zookeeper
+
+  # FHIR Extractor (Jembi) - Sends FHIR resources to Kafka
+  fhir-extractor:
+    image: jembi/fhir-extractor:latest
+    container_name: fhir-extractor
+    environment:
+      - FHIR_URL=http://hapi-fhir:8080/fhir
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_TOPIC=fhir-resources
+      - POLL_INTERVAL=30000
+      - RESOURCE_TYPES=Patient,Coverage,Practitioner,Organization
+    networks:
+      - ndpr-network
+    depends_on:
+      - hapi-fhir
+      - kafka
+
+  # ===========================================
+  # ANALYTICS STACK (Elasticsearch + Kibana)
+  # ===========================================
+  
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - cluster.name=ndpr-analytics
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    networks:
+      - ndpr-network
+      - analytics-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: kibana
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=ndpr-kibana
+      - XPACK_SECURITY_ENABLED=false
+    ports:
+      - "5601:5601"
+    networks:
+      - ndpr-network
+      - analytics-network
+    depends_on:
+      - elasticsearch
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5601/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Logstash - FHIR to Elasticsearch pipeline
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: logstash
+    volumes:
+      - ./analytics/logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./analytics/logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+    environment:
+      - LS_JAVA_OPTS=-Xmx512m -Xms512m
+    networks:
+      - ndpr-network
+      - analytics-network
+    depends_on:
+      - elasticsearch
+      - kafka
+
+  # Kafka Mapper Consumer (Jembi) - Maps FHIR to analytics format
+  kafka-mapper:
+    image: jembi/kafka-mapper-consumer:latest
+    container_name: kafka-mapper
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_CONSUMER_GROUP=ndpr-analytics
+      - KAFKA_TOPIC=fhir-resources
+      - CLICKHOUSE_URL=http://clickhouse:8123
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - MAPPING_CONFIG=/config/fhir-mapping.json
+    volumes:
+      - ./analytics/kafka-mapper/fhir-mapping.json:/config/fhir-mapping.json:ro
+    networks:
+      - ndpr-network
+      - analytics-network
+    depends_on:
+      - kafka
+      - elasticsearch
+
+  # ===========================================
+  # DATABASE LAYER
+  # ===========================================
+  
+  postgres:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_secret}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - ndpr-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ===========================================
+  # EGYPT CUSTOM MEDIATORS
+  # ===========================================
+  
+  egypt-nid-validator:
+    build:
+      context: ./services/egypt-nid-validator
+    container_name: egypt-nid-validator
+    environment:
+      - PORT=3001
+      - OPENHIM_URL=https://openhim-core:8080
+      - OPENHIM_USERNAME=root@openhim.org
+      - OPENHIM_PASSWORD=${OPENHIM_PASSWORD:-openhim-password}
+    ports:
+      - "3001:3001"
+    networks:
+      - ndpr-network
+    depends_on:
+      - openhim-core
+
+  arabic-name-normalizer:
+    build:
+      context: ./services/arabic-name-normalizer
+    container_name: arabic-name-normalizer
+    environment:
+      - PORT=3002
+      - JEMPI_URL=http://jempi-api:50000
+      - OPENHIM_URL=https://openhim-core:8080
+    ports:
+      - "3002:3002"
+    networks:
+      - ndpr-network
+    depends_on:
+      - openhim-core
+      - jempi-api
+
+  registry-bridge:
+    build:
+      context: ./services/registry-bridge
+    container_name: registry-bridge
+    environment:
+      - PORT=3003
+      - REGISTRY_URL=http://registry:8081
+      - HAPI_FHIR_URL=http://hapi-fhir:8080/fhir
+      - JEMPI_URL=http://jempi-api:50000
+      - OPENHIM_URL=https://openhim-core:8080
+    ports:
+      - "3003:3003"
+    networks:
+      - ndpr-network
+    depends_on:
+      - openhim-core
+      - hapi-fhir
+      - jempi-api
+
+  uhis-eligibility:
+    build:
+      context: ./services/uhis-eligibility
+    container_name: uhis-eligibility
+    environment:
+      - PORT=3004
+      - UHIS_API_URL=${UHIS_API_URL:-http://uhis-mock:8080}
+      - OPENHIM_URL=https://openhim-core:8080
+    ports:
+      - "3004:3004"
+    networks:
+      - ndpr-network
+    depends_on:
+      - openhim-core
+
+  prescription-link:
+    build:
+      context: ./services/prescription-link
+    container_name: prescription-link
+    environment:
+      - PORT=3005
+      - RX_API_URL=${RX_API_URL:-http://rx-system:8080}
+      - EMD_API_URL=${EMD_API_URL:-http://emd-mock:8080}
+      - OPENHIM_URL=https://openhim-core:8080
+    ports:
+      - "3005:3005"
+    networks:
+      - ndpr-network
+    depends_on:
+      - openhim-core
+
+  # ===========================================
+  # MONITORING (Optional)
+  # ===========================================
+  
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - ndpr-network
+    profiles:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "3000:3000"
+    networks:
+      - ndpr-network
+    profiles:
+      - monitoring
+    depends_on:
+      - prometheus

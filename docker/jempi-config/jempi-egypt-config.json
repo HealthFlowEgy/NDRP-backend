@@ -1,0 +1,293 @@
+{
+  "$schema": "https://jembi.github.io/JeMPI/schemas/config.schema.json",
+  "version": "1.1.0",
+  "deployment": {
+    "name": "Egypt NDPR MPI",
+    "description": "Master Patient Index for Egypt National Digital Registry Platform",
+    "country": "EG",
+    "language": "ar"
+  },
+  "demographicFields": [
+    {
+      "fieldName": "nationalId",
+      "fieldType": "String",
+      "indexGoldenRecord": true,
+      "indexInteraction": true,
+      "linkMetaData": {
+        "comparison": "EXACT",
+        "comparisonWeight": 0.99,
+        "m": 0.999,
+        "u": 0.00001
+      },
+      "validation": {
+        "required": true,
+        "regex": "^[23]\\d{13}$",
+        "errorMessage": "Egyptian National ID must be 14 digits starting with 2 or 3"
+      }
+    },
+    {
+      "fieldName": "healthId",
+      "fieldType": "String",
+      "indexGoldenRecord": true,
+      "indexInteraction": true,
+      "linkMetaData": {
+        "comparison": "EXACT",
+        "comparisonWeight": 0.95,
+        "m": 0.999,
+        "u": 0.0001
+      },
+      "validation": {
+        "required": false,
+        "regex": "^HID-EG-\\d{8}$"
+      }
+    },
+    {
+      "fieldName": "fullNameArabic",
+      "fieldType": "String",
+      "indexGoldenRecord": true,
+      "indexInteraction": true,
+      "linkMetaData": {
+        "comparison": "JARO_WINKLER",
+        "comparisonWeight": 0.85,
+        "threshold": 0.75,
+        "m": 0.90,
+        "u": 0.10
+      },
+      "preprocessing": {
+        "normalizer": "arabic-name-normalizer",
+        "operations": [
+          "REMOVE_DIACRITICS",
+          "NORMALIZE_ALEF",
+          "NORMALIZE_TAA_MARBUTA",
+          "NORMALIZE_YAA",
+          "NORMALIZE_PREFIXES",
+          "TRIM",
+          "UPPERCASE"
+        ]
+      }
+    },
+    {
+      "fieldName": "fullNameArabicSoundex",
+      "fieldType": "String",
+      "indexGoldenRecord": true,
+      "indexInteraction": true,
+      "linkMetaData": {
+        "comparison": "EXACT",
+        "comparisonWeight": 0.70,
+        "m": 0.85,
+        "u": 0.15
+      },
+      "derivedFrom": "fullNameArabic",
+      "derivationMethod": "ARABIC_SOUNDEX"
+    },
+    {
+      "fieldName": "fullNameEnglish",
+      "fieldType": "String",
+      "indexGoldenRecord": true,
+      "indexInteraction": true,
+      "linkMetaData": {
+        "comparison": "JARO_WINKLER",
+        "comparisonWeight": 0.60,
+        "threshold": 0.80,
+        "m": 0.85,
+        "u": 0.15
+      }
+    },
+    {
+      "fieldName": "birthDate",
+      "fieldType": "Date",
+      "indexGoldenRecord": true,
+      "indexInteraction": true,
+      "linkMetaData": {
+        "comparison": "EXACT",
+        "comparisonWeight": 0.90,
+        "m": 0.95,
+        "u": 0.01
+      },
+      "validation": {
+        "required": true,
+        "format": "YYYY-MM-DD"
+      }
+    },
+    {
+      "fieldName": "gender",
+      "fieldType": "String",
+      "indexGoldenRecord": true,
+      "indexInteraction": true,
+      "linkMetaData": {
+        "comparison": "EXACT",
+        "comparisonWeight": 0.80,
+        "m": 0.99,
+        "u": 0.50
+      },
+      "validation": {
+        "required": true,
+        "enum": ["male", "female"]
+      }
+    },
+    {
+      "fieldName": "mobileNumber",
+      "fieldType": "String",
+      "indexGoldenRecord": true,
+      "indexInteraction": true,
+      "linkMetaData": {
+        "comparison": "EXACT",
+        "comparisonWeight": 0.75,
+        "m": 0.90,
+        "u": 0.05
+      },
+      "preprocessing": {
+        "operations": [
+          "NORMALIZE_PHONE_EG"
+        ]
+      },
+      "validation": {
+        "regex": "^(\\+20|0)?1[0125]\\d{8}$"
+      }
+    },
+    {
+      "fieldName": "birthGovernorate",
+      "fieldType": "String",
+      "indexGoldenRecord": true,
+      "indexInteraction": true,
+      "linkMetaData": {
+        "comparison": "EXACT",
+        "comparisonWeight": 0.65,
+        "m": 0.95,
+        "u": 0.037
+      },
+      "validation": {
+        "enum": [
+          "Cairo", "Alexandria", "Giza", "Shubra El Kheima", "Port Said",
+          "Suez", "Luxor", "Mansoura", "El Mahalla El Kubra", "Tanta",
+          "Asyut", "Ismailia", "Fayyum", "Zagazig", "Aswan",
+          "Damietta", "Damanhur", "Minya", "Beni Suef", "Qena",
+          "Sohag", "Hurghada", "6th of October City", "Shibin El Kom",
+          "Banha", "Kafr El Sheikh", "Arish", "Mallawi", "10th of Ramadan City",
+          "Bilqas", "Marsa Matruh", "Idfu", "Mit Ghamr", "Al Hamidiyyah",
+          "Desouk", "Qalyub", "Abu Kabir", "Kafr El Dawwar", "Girga",
+          "Akhmim", "Matareya"
+        ]
+      }
+    },
+    {
+      "fieldName": "motherFullNameArabic",
+      "fieldType": "String",
+      "indexGoldenRecord": false,
+      "indexInteraction": true,
+      "linkMetaData": {
+        "comparison": "JARO_WINKLER",
+        "comparisonWeight": 0.50,
+        "threshold": 0.80,
+        "m": 0.80,
+        "u": 0.20
+      },
+      "preprocessing": {
+        "normalizer": "arabic-name-normalizer"
+      }
+    }
+  ],
+  "rules": {
+    "deterministic": [
+      {
+        "name": "NID_EXACT_MATCH",
+        "description": "Exact National ID match - auto-link",
+        "vars": ["nationalId"],
+        "text": "eq(nationalId, nationalId)"
+      },
+      {
+        "name": "HID_EXACT_MATCH",
+        "description": "Exact Health ID match - auto-link",
+        "vars": ["healthId"],
+        "text": "eq(healthId, healthId)"
+      }
+    ],
+    "probabilistic": {
+      "linkThreshold": 0.85,
+      "marginThreshold": 0.10,
+      "reviewThreshold": 0.65
+    },
+    "blocking": [
+      {
+        "name": "BLOCK_BY_SOUNDEX",
+        "description": "Block by Arabic Soundex of name",
+        "vars": ["fullNameArabicSoundex"]
+      },
+      {
+        "name": "BLOCK_BY_DOB_GENDER",
+        "description": "Block by birth date and gender",
+        "vars": ["birthDate", "gender"]
+      },
+      {
+        "name": "BLOCK_BY_GOVERNORATE_DOB",
+        "description": "Block by governorate and birth year",
+        "vars": ["birthGovernorate", "birthDate"]
+      }
+    ]
+  },
+  "goldenRecord": {
+    "idPrefix": "GR-EG-",
+    "idLength": 12,
+    "survivorshipRules": [
+      {
+        "field": "nationalId",
+        "rule": "MOST_RECENT_NON_NULL"
+      },
+      {
+        "field": "healthId",
+        "rule": "FIRST_NON_NULL"
+      },
+      {
+        "field": "fullNameArabic",
+        "rule": "LONGEST"
+      },
+      {
+        "field": "fullNameEnglish",
+        "rule": "MOST_RECENT_NON_NULL"
+      },
+      {
+        "field": "mobileNumber",
+        "rule": "MOST_RECENT_NON_NULL"
+      },
+      {
+        "field": "birthDate",
+        "rule": "MOST_COMMON"
+      },
+      {
+        "field": "gender",
+        "rule": "MOST_COMMON"
+      }
+    ]
+  },
+  "notifications": {
+    "enabled": true,
+    "reviewQueue": {
+      "maxPending": 1000,
+      "escalationThresholdHours": 48
+    }
+  },
+  "audit": {
+    "enabled": true,
+    "retentionDays": 2555,
+    "logLevel": "INFO"
+  },
+  "api": {
+    "fhir": {
+      "enabled": true,
+      "version": "R4",
+      "patientProfile": "http://fhir.health.gov.eg/StructureDefinition/eg-patient"
+    }
+  },
+  "security": {
+    "authentication": {
+      "provider": "keycloak",
+      "realm": "ndpr",
+      "clientId": "jempi-api"
+    },
+    "dataProtection": {
+      "encryptPII": true,
+      "maskingEnabled": true,
+      "consentRequired": true
+    }
+  }
+}

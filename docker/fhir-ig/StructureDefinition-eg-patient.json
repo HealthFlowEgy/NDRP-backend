@@ -1,0 +1,315 @@
+{
+  "resourceType": "StructureDefinition",
+  "id": "eg-patient",
+  "url": "http://fhir.health.gov.eg/StructureDefinition/eg-patient",
+  "version": "1.0.0",
+  "name": "EgyptPatient",
+  "title": "Egypt Patient Profile",
+  "status": "active",
+  "experimental": false,
+  "date": "2026-01-09",
+  "publisher": "Egypt Ministry of Health and Population",
+  "contact": [
+    {
+      "name": "HealthFlow Group",
+      "telecom": [
+        {
+          "system": "email",
+          "value": "support@healthflow.tech"
+        }
+      ]
+    }
+  ],
+  "description": "FHIR R4 Patient profile for Egypt National Digital Registry Platform (NDPR). Includes Egyptian National ID, Health ID, UHIS coverage status, and Arabic name support.",
+  "jurisdiction": [
+    {
+      "coding": [
+        {
+          "system": "urn:iso:std:iso:3166",
+          "code": "EG",
+          "display": "Egypt"
+        }
+      ]
+    }
+  ],
+  "fhirVersion": "4.0.1",
+  "kind": "resource",
+  "abstract": false,
+  "type": "Patient",
+  "baseDefinition": "http://hl7.org/fhir/StructureDefinition/Patient",
+  "derivation": "constraint",
+  "differential": {
+    "element": [
+      {
+        "id": "Patient",
+        "path": "Patient",
+        "short": "Egypt Patient",
+        "definition": "A patient registered in the Egypt NDPR system"
+      },
+      {
+        "id": "Patient.identifier",
+        "path": "Patient.identifier",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "system"
+            }
+          ],
+          "rules": "open"
+        },
+        "min": 1
+      },
+      {
+        "id": "Patient.identifier:nationalId",
+        "path": "Patient.identifier",
+        "sliceName": "nationalId",
+        "short": "Egyptian National ID",
+        "definition": "14-digit Egyptian National Identification Number",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Patient.identifier:nationalId.system",
+        "path": "Patient.identifier.system",
+        "min": 1,
+        "fixedUri": "http://fhir.health.gov.eg/sid/national-id"
+      },
+      {
+        "id": "Patient.identifier:nationalId.value",
+        "path": "Patient.identifier.value",
+        "min": 1,
+        "constraint": [
+          {
+            "key": "eg-nid-1",
+            "severity": "error",
+            "human": "National ID must be 14 digits starting with 2 or 3",
+            "expression": "matches('^[23][0-9]{13}$')"
+          }
+        ]
+      },
+      {
+        "id": "Patient.identifier:healthId",
+        "path": "Patient.identifier",
+        "sliceName": "healthId",
+        "short": "Health ID",
+        "definition": "System-generated Health ID for NDPR",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Patient.identifier:healthId.system",
+        "path": "Patient.identifier.system",
+        "min": 1,
+        "fixedUri": "http://fhir.health.gov.eg/sid/health-id"
+      },
+      {
+        "id": "Patient.identifier:healthId.value",
+        "path": "Patient.identifier.value",
+        "constraint": [
+          {
+            "key": "eg-hid-1",
+            "severity": "error",
+            "human": "Health ID must follow pattern HID-EG-XXXXXXXX",
+            "expression": "matches('^HID-EG-[0-9]{8}$')"
+          }
+        ]
+      },
+      {
+        "id": "Patient.identifier:uhisNumber",
+        "path": "Patient.identifier",
+        "sliceName": "uhisNumber",
+        "short": "UHIS Number",
+        "definition": "Universal Health Insurance System enrollment number",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Patient.identifier:uhisNumber.system",
+        "path": "Patient.identifier.system",
+        "min": 1,
+        "fixedUri": "http://fhir.health.gov.eg/sid/uhis-number"
+      },
+      {
+        "id": "Patient.name",
+        "path": "Patient.name",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "use"
+            }
+          ],
+          "rules": "open"
+        },
+        "min": 1
+      },
+      {
+        "id": "Patient.name:arabic",
+        "path": "Patient.name",
+        "sliceName": "arabic",
+        "short": "Arabic Name",
+        "definition": "Patient's full name in Arabic",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Patient.name:arabic.use",
+        "path": "Patient.name.use",
+        "fixedCode": "official"
+      },
+      {
+        "id": "Patient.name:arabic.text",
+        "path": "Patient.name.text",
+        "min": 1,
+        "constraint": [
+          {
+            "key": "eg-name-ar-1",
+            "severity": "error",
+            "human": "Arabic name must contain Arabic characters",
+            "expression": "matches('[\\u0600-\\u06FF]+')"
+          }
+        ]
+      },
+      {
+        "id": "Patient.name:english",
+        "path": "Patient.name",
+        "sliceName": "english",
+        "short": "English Name",
+        "definition": "Patient's full name transliterated to English",
+        "min": 0,
+        "max": "1"
+      },
+      {
+        "id": "Patient.name:english.use",
+        "path": "Patient.name.use",
+        "fixedCode": "usual"
+      },
+      {
+        "id": "Patient.telecom",
+        "path": "Patient.telecom",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "system"
+            }
+          ],
+          "rules": "open"
+        }
+      },
+      {
+        "id": "Patient.telecom:mobile",
+        "path": "Patient.telecom",
+        "sliceName": "mobile",
+        "short": "Mobile Number",
+        "min": 1,
+        "max": "1"
+      },
+      {
+        "id": "Patient.telecom:mobile.system",
+        "path": "Patient.telecom.system",
+        "fixedCode": "phone"
+      },
+      {
+        "id": "Patient.telecom:mobile.value",
+        "path": "Patient.telecom.value",
+        "constraint": [
+          {
+            "key": "eg-phone-1",
+            "severity": "error",
+            "human": "Egyptian mobile number must start with +20 or 01",
+            "expression": "matches('^(\\+20|0)?1[0125][0-9]{8}$')"
+          }
+        ]
+      },
+      {
+        "id": "Patient.gender",
+        "path": "Patient.gender",
+        "min": 1
+      },
+      {
+        "id": "Patient.birthDate",
+        "path": "Patient.birthDate",
+        "min": 1
+      },
+      {
+        "id": "Patient.address",
+        "path": "Patient.address",
+        "min": 1
+      },
+      {
+        "id": "Patient.address.state",
+        "path": "Patient.address.state",
+        "short": "Governorate",
+        "definition": "Egyptian governorate code",
+        "binding": {
+          "strength": "required",
+          "valueSet": "http://fhir.health.gov.eg/ValueSet/eg-governorates"
+        }
+      },
+      {
+        "id": "Patient.extension",
+        "path": "Patient.extension",
+        "slicing": {
+          "discriminator": [
+            {
+              "type": "value",
+              "path": "url"
+            }
+          ],
+          "rules": "open"
+        }
+      },
+      {
+        "id": "Patient.extension:uhisStatus",
+        "path": "Patient.extension",
+        "sliceName": "uhisStatus",
+        "short": "UHIS Enrollment Status",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "http://fhir.health.gov.eg/StructureDefinition/eg-uhis-status"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Patient.extension:uhisTier",
+        "path": "Patient.extension",
+        "sliceName": "uhisTier",
+        "short": "UHIS Tier",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "http://fhir.health.gov.eg/StructureDefinition/eg-uhis-tier"
+            ]
+          }
+        ]
+      },
+      {
+        "id": "Patient.extension:birthGovernorate",
+        "path": "Patient.extension",
+        "sliceName": "birthGovernorate",
+        "short": "Birth Governorate",
+        "definition": "Governorate of birth extracted from National ID",
+        "min": 0,
+        "max": "1",
+        "type": [
+          {
+            "code": "Extension",
+            "profile": [
+              "http://fhir.health.gov.eg/StructureDefinition/eg-birth-governorate"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

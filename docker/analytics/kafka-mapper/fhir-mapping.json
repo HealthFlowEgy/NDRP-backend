@@ -1,0 +1,290 @@
+{
+  "$schema": "https://github.com/jembi/kafka-mapper-consumer/schema/mapping.json",
+  "version": "1.0.0",
+  "name": "Egypt NDPR FHIR Mapping",
+  "description": "Maps FHIR resources to analytics data stores for Egypt NDPR",
+  "mappings": [
+    {
+      "resourceType": "Patient",
+      "target": {
+        "type": "elasticsearch",
+        "index": "ndpr-patients",
+        "idField": "health_id"
+      },
+      "fields": [
+        {
+          "source": "$.identifier[?(@.system=='http://fhir.health.gov.eg/sid/national-id')].value",
+          "target": "national_id",
+          "type": "string",
+          "indexed": true,
+          "pii": true
+        },
+        {
+          "source": "$.identifier[?(@.system=='http://fhir.health.gov.eg/sid/health-id')].value",
+          "target": "health_id",
+          "type": "string",
+          "indexed": true
+        },
+        {
+          "source": "$.identifier[?(@.system=='http://fhir.health.gov.eg/sid/uhis-number')].value",
+          "target": "uhis_number",
+          "type": "string",
+          "indexed": true
+        },
+        {
+          "source": "$.name[?(@.use=='official')].text",
+          "target": "name_arabic",
+          "type": "string",
+          "indexed": true,
+          "analyzer": "arabic",
+          "pii": true
+        },
+        {
+          "source": "$.name[?(@.use=='usual')].text",
+          "target": "name_english",
+          "type": "string",
+          "indexed": true,
+          "pii": true
+        },
+        {
+          "source": "$.gender",
+          "target": "gender",
+          "type": "keyword"
+        },
+        {
+          "source": "$.birthDate",
+          "target": "birth_date",
+          "type": "date",
+          "format": "yyyy-MM-dd",
+          "pii": true
+        },
+        {
+          "source": "$.telecom[?(@.system=='phone')].value",
+          "target": "mobile_number",
+          "type": "string",
+          "pii": true
+        },
+        {
+          "source": "$.telecom[?(@.system=='email')].value",
+          "target": "email",
+          "type": "string",
+          "pii": true
+        },
+        {
+          "source": "$.address[0].state",
+          "target": "governorate",
+          "type": "keyword"
+        },
+        {
+          "source": "$.address[0].city",
+          "target": "city",
+          "type": "keyword"
+        },
+        {
+          "source": "$.extension[?(@.url=~'uhis-status')].valueCode",
+          "target": "uhis_status",
+          "type": "keyword"
+        },
+        {
+          "source": "$.extension[?(@.url=~'uhis-tier')].valueCode",
+          "target": "uhis_tier",
+          "type": "keyword"
+        },
+        {
+          "source": "$.extension[?(@.url=~'birth-governorate')].valueCode",
+          "target": "birth_governorate",
+          "type": "keyword"
+        },
+        {
+          "source": "$.meta.lastUpdated",
+          "target": "last_updated",
+          "type": "date"
+        }
+      ],
+      "computedFields": [
+        {
+          "name": "age",
+          "type": "integer",
+          "expression": "yearsBetween(birth_date, now())"
+        },
+        {
+          "name": "age_group",
+          "type": "keyword",
+          "expression": "case(age < 5, '0-4', age < 15, '5-14', age < 25, '15-24', age < 45, '25-44', age < 65, '45-64', '65+')"
+        },
+        {
+          "name": "is_uhis_enrolled",
+          "type": "boolean",
+          "expression": "uhis_status == 'enrolled' || uhis_status == 'active'"
+        }
+      ]
+    },
+    {
+      "resourceType": "Coverage",
+      "target": {
+        "type": "elasticsearch",
+        "index": "ndpr-coverage"
+      },
+      "fields": [
+        {
+          "source": "$.id",
+          "target": "coverage_id",
+          "type": "string"
+        },
+        {
+          "source": "$.status",
+          "target": "status",
+          "type": "keyword"
+        },
+        {
+          "source": "$.type.coding[0].code",
+          "target": "coverage_type",
+          "type": "keyword"
+        },
+        {
+          "source": "$.beneficiary.reference",
+          "target": "patient_reference",
+          "type": "string"
+        },
+        {
+          "source": "$.period.start",
+          "target": "coverage_start",
+          "type": "date"
+        },
+        {
+          "source": "$.period.end",
+          "target": "coverage_end",
+          "type": "date"
+        },
+        {
+          "source": "$.class[?(@.type.coding[0].code=='tier')].value",
+          "target": "tier",
+          "type": "keyword"
+        },
+        {
+          "source": "$.payor[0].display",
+          "target": "payor",
+          "type": "keyword"
+        }
+      ],
+      "computedFields": [
+        {
+          "name": "copay_percentage",
+          "type": "integer",
+          "expression": "case(tier == 'A', 0, tier == 'B', 10, tier == 'C', 20, tier == 'D', 30, 0)"
+        },
+        {
+          "name": "is_active",
+          "type": "boolean",
+          "expression": "status == 'active' && (coverage_end == null || coverage_end > now())"
+        }
+      ]
+    },
+    {
+      "resourceType": "Practitioner",
+      "target": {
+        "type": "elasticsearch",
+        "index": "ndpr-practitioners"
+      },
+      "fields": [
+        {
+          "source": "$.id",
+          "target": "practitioner_id",
+          "type": "string"
+        },
+        {
+          "source": "$.identifier[?(@.system=='http://fhir.health.gov.eg/sid/practitioner-id')].value",
+          "target": "license_number",
+          "type": "string"
+        },
+        {
+          "source": "$.name[0].text",
+          "target": "name",
+          "type": "string"
+        },
+        {
+          "source": "$.qualification[0].code.coding[0].display",
+          "target": "qualification",
+          "type": "keyword"
+        },
+        {
+          "source": "$.qualification[0].code.coding[0].code",
+          "target": "specialty_code",
+          "type": "keyword"
+        }
+      ]
+    }
+  ],
+  "aggregations": [
+    {
+      "name": "daily_registrations",
+      "source": "ndpr-patients",
+      "schedule": "0 0 * * *",
+      "target": {
+        "type": "elasticsearch",
+        "index": "ndpr-analytics-daily"
+      },
+      "query": {
+        "range": {
+          "last_updated": {
+            "gte": "now-1d/d",
+            "lt": "now/d"
+          }
+        }
+      },
+      "aggregations": {
+        "by_governorate": {
+          "terms": { "field": "governorate" }
+        },
+        "by_gender": {
+          "terms": { "field": "gender" }
+        },
+        "by_age_group": {
+          "terms": { "field": "age_group" }
+        },
+        "by_uhis_status": {
+          "terms": { "field": "uhis_status" }
+        },
+        "by_uhis_tier": {
+          "terms": { "field": "uhis_tier" }
+        }
+      }
+    },
+    {
+      "name": "governorate_summary",
+      "source": "ndpr-patients",
+      "schedule": "0 */6 * * *",
+      "target": {
+        "type": "elasticsearch",
+        "index": "ndpr-analytics-governorate"
+      },
+      "aggregations": {
+        "by_governorate": {
+          "terms": { 
+            "field": "governorate",
+            "size": 30
+          },
+          "aggs": {
+            "total_patients": { "value_count": { "field": "health_id" } },
+            "uhis_enrolled": { 
+              "filter": { "term": { "is_uhis_enrolled": true } }
+            },
+            "by_gender": {
+              "terms": { "field": "gender" }
+            },
+            "by_age_group": {
+              "terms": { "field": "age_group" }
+            }
+          }
+        }
+      }
+    }
+  ],
+  "piiHandling": {
+    "enabled": true,
+    "hashFields": ["national_id", "mobile_number", "email"],
+    "maskFields": ["name_arabic", "name_english"],
+    "maskPattern": "***",
+    "excludeFromAnalytics": ["national_id", "mobile_number", "email", "birth_date"]
+  }
+}
