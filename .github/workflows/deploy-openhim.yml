@@ -49,13 +49,13 @@ jobs:
       
       - name: Execute deployment
         run: |
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ConnectionAttempts=10 -o UserKnownHostsFile=/dev/null \
             root@${{ env.DROPLET_IP }} \
             'bash /tmp/deploy-openhim.sh ${{ github.event.inputs.environment || 'production' }}'
       
       - name: Verify deployment
         run: |
-          ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 -o ConnectionAttempts=10 -o UserKnownHostsFile=/dev/null \
             root@${{ env.DROPLET_IP }} \
             'cd /opt/NDRP-backend/docker && docker-compose -f docker-compose.jembi-platform.yml ps'
       
