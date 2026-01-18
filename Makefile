@@ -29,6 +29,43 @@ test: build
 clean:
 	@rm -rf target || true
 	@rm java/registry/target/registry.jar || true
+# =============================================================================
+# OpenHIM Deployment Commands
+# =============================================================================
+
+.PHONY: deploy deploy-openhim stop logs status health-check
+
+DOCKER_COMPOSE_FILE := docker/docker-compose.jembi-platform.yml
+SCRIPTS_DIR := scripts
+ENVIRONMENT ?= production
+
+deploy: deploy-openhim
+
+deploy-openhim: ## Deploy OpenHIM architecture
+	@echo "Deploying OpenHIM to $(ENVIRONMENT)..."
+	@bash $(SCRIPTS_DIR)/deploy-openhim.sh $(ENVIRONMENT)
+
+stop: ## Stop all services
+	@echo "Stopping services..."
+	@cd docker && docker-compose -f $(DOCKER_COMPOSE_FILE) down
+
+logs: ## View service logs
+	@cd docker && docker-compose -f $(DOCKER_COMPOSE_FILE) logs -f
+
+status: ## Show service status
+	@echo "Service Status:"
+	@cd docker && docker-compose -f $(DOCKER_COMPOSE_FILE) ps
+
+health-check: ## Perform health checks
+	@echo "Performing health checks..."
+	@curl -s http://localhost:8080/heartbeat > /dev/null && echo "OpenHIM Core: OK" || echo "OpenHIM Core: FAILED"
+	@curl -s http://localhost:8081 > /dev/null && echo "Registry API: OK" || echo "Registry API: FAILED"
+	@curl -s http://localhost:50000/health > /dev/null && echo "JeMPI API: OK" || echo "JeMPI API: FAILED"
+
+# =============================================================================
+# Build and Release Commands
+# =============================================================================
+
 release:
 	docker tag dockerhub/sunbird-rc-core dockerhub/sunbird-rc-core:$(RELEASE_VERSION)
 	docker tag dockerhub/sunbird-rc-claim-ms dockerhub/sunbird-rc-claim-ms:$(RELEASE_VERSION)
